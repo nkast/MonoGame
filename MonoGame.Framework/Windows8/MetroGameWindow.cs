@@ -112,6 +112,7 @@ namespace Microsoft.Xna.Framework
             _coreWindow.Closed += Window_Closed;
 
             _coreWindow.Activated += Window_FocusChanged;
+            _coreWindow.VisibilityChanged += _coreWindow_VisibilityChanged;
 #if !WINDOWS_PHONE81
             _currentViewState = ApplicationView.Value;
 #endif
@@ -119,6 +120,11 @@ namespace Microsoft.Xna.Framework
             SetClientBounds(bounds.Width, bounds.Height);
 
             SetCursor(false);
+        }
+
+        void _coreWindow_VisibilityChanged(CoreWindow sender, VisibilityChangedEventArgs args)
+        {
+            Platform.IsVisible = args.Visible;
         }
 
         private void Window_FocusChanged(CoreWindow sender, WindowActivatedEventArgs args)

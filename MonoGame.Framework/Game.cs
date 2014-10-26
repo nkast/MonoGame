@@ -214,6 +214,11 @@ namespace Microsoft.Xna.Framework
             get { return Platform.IsActive; }
         }
 
+        public bool IsVisible
+        {
+            get { return Platform.IsVisible; }
+        }
+
         public bool IsMouseVisible
         {
             get { return Platform.IsMouseVisible; }
