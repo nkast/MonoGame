@@ -750,7 +750,12 @@
     </Compile>
     <Compile Include="Graphics\Shader\ShaderStage.cs" />
     <Compile Include="Graphics\SpriteBatch.cs" />
-    <Compile Include="Graphics\SpriteBatcher.cs" />
+    <Compile Include="Graphics\SpriteBatcher.cs" >
+      <ExcludeServices>DirectXGraphics</ExcludeServices>
+    </Compile>
+    <Compile Include="Graphics\SpriteBatcher.DirectX-OPT.cs">
+      <Services>DirectXGraphics</Services>
+    </Compile>
     <Compile Include="Graphics\SpriteBatchItem.cs" />
     <Compile Include="Graphics\SpriteEffects.cs" />
     <Compile Include="Graphics\SpriteFont.cs" />
