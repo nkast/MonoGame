@@ -26,6 +26,7 @@ namespace Microsoft.Xna.Framework
         private DepthFormat _preferredDepthStencilFormat;
         private bool _preferMultiSampling;
         private DisplayOrientation _supportedOrientations;
+        private bool _lockToNativeOrientation = false;
         private bool _synchronizedWithVerticalRetrace = true;
         private bool _drawBegun;
         bool disposed;
@@ -194,6 +195,8 @@ namespace Microsoft.Xna.Framework
             _graphicsDevice.PresentationParameters.BackBufferWidth = _preferredBackBufferWidth;
             _graphicsDevice.PresentationParameters.BackBufferHeight = _preferredBackBufferHeight;
             _graphicsDevice.PresentationParameters.DepthStencilFormat = _preferredDepthStencilFormat;
+            _graphicsDevice.PresentationParameters.DisplayOrientation = _game.Window.CurrentOrientation;
+            _graphicsDevice.PresentationParameters.LockToNativeOrientation = _lockToNativeOrientation;
             
             // TODO: We probably should be resetting the whole device
             // if this changes as we are targeting a different 
@@ -339,6 +342,9 @@ namespace Microsoft.Xna.Framework
             presentationParameters.BackBufferWidth = _preferredBackBufferWidth;
             presentationParameters.BackBufferHeight = _preferredBackBufferHeight;
             presentationParameters.DepthStencilFormat = _preferredDepthStencilFormat;
+
+            presentationParameters.LockToNativeOrientation = _lockToNativeOrientation;
+
             presentationParameters.IsFullScreen = false;
 
 #if WINDOWS_PHONE
@@ -405,6 +411,10 @@ namespace Microsoft.Xna.Framework
             TouchPanel.DisplayWidth = _graphicsDevice.PresentationParameters.BackBufferWidth;
             TouchPanel.DisplayHeight = _graphicsDevice.PresentationParameters.BackBufferHeight;
             TouchPanel.DisplayOrientation = _graphicsDevice.PresentationParameters.DisplayOrientation;
+
+#if WINDOWS_STOREAPP || WINDOWS_UAP
+            GraphicsDevice.SetRotation(_graphicsDevice.PresentationParameters.DisplayOrientation);
+#endif
         }
 
         public void ToggleFullScreen()
@@ -653,6 +663,19 @@ namespace Microsoft.Xna.Framework
 
             Android.Util.Log.Debug("MonoGame", "GraphicsDeviceManager.ResetClientBounds: newClientBounds=" + newClientBounds.ToString());
 #endif
+        }
+
+        public bool LockToNativeOrientation 
+        {
+            get { return _lockToNativeOrientation; } 
+            set 
+            {
+#if WINDOWS_STOREAPP || WINDOWS_UAP
+                _lockToNativeOrientation = value;
+#else
+                throw new PlatformNotSupportedException();
+#endif
+            } 
         }
 
     }

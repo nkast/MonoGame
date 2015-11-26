@@ -142,6 +142,12 @@ namespace Microsoft.Xna.Framework.Graphics
 			get; 
 			set; 
 		}
+
+        public bool LockToNativeOrientation
+        {
+            get;
+            set;
+        }
 		
 		public RenderTargetUsage RenderTargetUsage { get; set; }
 

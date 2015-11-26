@@ -137,6 +137,25 @@ namespace Microsoft.Xna.Framework
 
         private void SetClientBounds(double width, double height)
         {
+            // swap width/height when LockToNativeOrientation is enabled 
+            // and CurrentOrientation is not NativeOrientation 
+            if (Game != null && Game.graphicsDeviceManager.LockToNativeOrientation)
+            {
+                DisplayOrientations PortraitAny = DisplayOrientations.Portrait | DisplayOrientations.PortraitFlipped;
+                DisplayOrientations LandscapeAny = DisplayOrientations.Landscape | DisplayOrientations.LandscapeFlipped;
+                DisplayInformation di = DisplayInformation.GetForCurrentView();
+                var no = di.NativeOrientation;
+                var co = di.CurrentOrientation;
+
+                if (!(PortraitAny.HasFlag(co) && PortraitAny.HasFlag(no)) &&
+                    !(LandscapeAny.HasFlag(co) && LandscapeAny.HasFlag(no)))
+        	    {
+                    	var tmp = width;
+                    	width = height;
+                    	height = tmp;
+	            }
+			}
+
             var dpi = DisplayProperties.LogicalDpi;
             var pwidth = (int)Math.Round(width * dpi / 96.0);
             var pheight = (int)Math.Round(height * dpi / 96.0);
@@ -168,8 +187,11 @@ namespace Microsoft.Xna.Framework
                                                 manager.PreferredBackBufferHeight / clientHeight);
             }
 
+            Rectangle oldClientBounds = _clientBounds;
             // Set the new client bounds.
             SetClientBounds(args.Size.Width, args.Size.Height);
+            //don't do anything if bounds are the same
+            if (oldClientBounds == _clientBounds) return;
 
             // Set the default new back buffer size and viewport, but this
             // can be overloaded by the two events below.
@@ -229,6 +251,17 @@ namespace Microsoft.Xna.Framework
         {
             // Set the new orientation.
             _orientation = ToOrientation(DisplayProperties.CurrentOrientation);
+
+
+#if WINDOWS_STOREAPP  || WINDOWS_UAP
+			if(Game.graphicsDeviceManager.LockToNativeOrientation)
+			{
+				Game.GraphicsDevice.SetRotation(_orientation);
+    	        // Call the user callback.
+	            OnOrientationChanged();
+				return;
+			}
+#endif
 
             // Call the user callback.
             OnOrientationChanged();
