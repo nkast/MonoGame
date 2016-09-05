@@ -19,15 +19,11 @@ namespace Microsoft.Xna.Framework
 {
     internal class InputEvents
     {
-        private readonly TouchQueue _touchQueue;
-
         // To convert from DIPs (device independent pixels) to actual screen resolution pixels.
         private static float _currentDipFactor;
 
-        public InputEvents(CoreWindow window, UIElement inputElement, TouchQueue touchQueue)
+        public InputEvents(CoreWindow window, UIElement inputElement)
         {
-            _touchQueue = touchQueue;
-
             // The key events are always tied to the window as those will
             // only arrive here if some other control hasn't gotten it.
             window.KeyDown += CoreWindow_KeyDown;
@@ -156,7 +152,7 @@ namespace Microsoft.Xna.Framework
 
             var isTouch = pointerPoint.PointerDevice.PointerDeviceType == PointerDeviceType.Touch;
 
-            _touchQueue.Enqueue((int)pointerPoint.PointerId, TouchLocationState.Pressed, pos, !isTouch);
+            TouchPanel.AddEvent((int)pointerPoint.PointerId, TouchLocationState.Pressed, pos, !isTouch);
             
             if (!isTouch)
             {
@@ -178,7 +174,7 @@ namespace Microsoft.Xna.Framework
 
             if (touchIsDown)
             {
-                _touchQueue.Enqueue((int)pointerPoint.PointerId, TouchLocationState.Moved, pos, !isTouch);
+                TouchPanel.AddEvent((int)pointerPoint.PointerId, TouchLocationState.Moved, pos, !isTouch);
             }
 
             if (!isTouch)
@@ -194,7 +190,7 @@ namespace Microsoft.Xna.Framework
 
             var isTouch = pointerPoint.PointerDevice.PointerDeviceType == PointerDeviceType.Touch;
 
-            _touchQueue.Enqueue((int)pointerPoint.PointerId, TouchLocationState.Released, pos, !isTouch);
+            TouchPanel.AddEvent((int)pointerPoint.PointerId, TouchLocationState.Released, pos, !isTouch);
 
             if (!isTouch)
             {
