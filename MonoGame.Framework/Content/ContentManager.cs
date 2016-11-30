@@ -26,9 +26,14 @@ namespace Microsoft.Xna.Framework.Content
 		private string _rootDirectory = string.Empty;
 		private IServiceProvider serviceProvider;
         private Dictionary<string, object> loadedAssets = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        internal Dictionary<string, object> loadedSharedResources = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 		private List<IDisposable> disposableAssets = new List<IDisposable>();
         private bool disposed;
 
+        public readonly static HashSet<Type> IgnoreReloadGraphicsAssetsTypes = new HashSet<Type>(new[] {
+                typeof(Microsoft.Xna.Framework.Audio.SoundEffect),
+            });
+		
 		private static object ContentManagerLock = new object();
         private static List<WeakReference> ContentManagers = new List<WeakReference>();
 
@@ -326,8 +331,6 @@ namespace Microsoft.Xna.Framework.Content
                 using (var reader = GetContentReaderFromXnb(assetName, stream, xnbReader, recordDisposableObject))
                 {
                     result = reader.ReadAsset<T>();
-                    if (result is GraphicsResource)
-                        ((GraphicsResource)result).Name = originalAssetName;
                 }
             }
             
@@ -386,7 +389,7 @@ namespace Microsoft.Xna.Framework.Content
             }
 
             var reader = new ContentReader(this, decompressedStream,
-                                                        originalAssetName, version, recordDisposableObject);
+                                                        originalAssetName, version, xnbLength, recordDisposableObject);
             
             return reader;
         }
@@ -413,6 +416,9 @@ namespace Microsoft.Xna.Framework.Content
         {
             foreach (var asset in LoadedAssets)
             {
+                if (IgnoreReloadGraphicsAssetsTypes.Contains(asset.Value.GetType()))
+                    continue;                
+                
                 // This never executes as asset.Key is never null.  This just forces the 
                 // linker to include the ReloadAsset function when AOT compiled.
                 if (asset.Key == null)
@@ -456,6 +462,7 @@ namespace Microsoft.Xna.Framework.Content
 		    }
 			disposableAssets.Clear();
 		    loadedAssets.Clear();
+		    loadedSharedResources.Clear();
 		}
 
 		public string RootDirectory
