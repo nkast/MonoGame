@@ -919,23 +919,18 @@ namespace Microsoft.Xna.Framework.Graphics
             float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layerDepth)
 		{
             CheckValid(spriteFont, text);
-
-            var source = new SpriteFont.CharacterSource(text);
-            
-            SpriteBatch spriteBatch = this;
-            SpriteFont.CharacterSource text2 = source;
-            SpriteEffects effect=effects;
-            float depth = layerDepth;
-            
+                        
             var flipAdjustment = Vector2.Zero;
 
-            var flippedVert = (effect & SpriteEffects.FlipVertically) == SpriteEffects.FlipVertically;
-            var flippedHorz = (effect & SpriteEffects.FlipHorizontally) == SpriteEffects.FlipHorizontally;
+            var flippedVert = (effects & SpriteEffects.FlipVertically) == SpriteEffects.FlipVertically;
+            var flippedHorz = (effects & SpriteEffects.FlipHorizontally) == SpriteEffects.FlipHorizontally;
 
             if (flippedVert || flippedHorz)
             {
                 Vector2 size;
-                spriteFont.MeasureString(ref text2, out size);
+                
+                var source = new SpriteFont.CharacterSource(text);
+                spriteFont.MeasureString(ref source, out size);
 
                 if (flippedHorz)
                 {
@@ -979,9 +974,9 @@ namespace Microsoft.Xna.Framework.Graphics
             var offset = Vector2.Zero;
             var firstGlyphOfLine = true;
 
-			for (var i = 0; i < text2.Length; ++i)
+			for (var i = 0; i < text.Length; ++i)
             {
-                var c = text2[i];
+                var c = text[i];
 
                 if (c == '\r')
                     continue;
@@ -1028,15 +1023,15 @@ namespace Microsoft.Xna.Framework.Graphics
                                             currentGlyph.BoundsInTexture.Width * scale.X,
                                             currentGlyph.BoundsInTexture.Height * scale.Y);
 
-				spriteBatch.DrawInternal(
+				DrawInternal(
                     spriteFont.Texture, destRect, currentGlyph.BoundsInTexture,
-					color, rotation, Vector2.Zero, effect, depth, false);
+					color, rotation, Vector2.Zero, effects, layerDepth, false);
 
                 offset.X += currentGlyph.Width + currentGlyph.RightSideBearing;
 			}
 
 			// We need to flush if we're using Immediate sort mode.
-			spriteBatch.FlushIfNeeded();
+			FlushIfNeeded();
 		}
 
         /// <summary>
@@ -1178,23 +1173,17 @@ namespace Microsoft.Xna.Framework.Graphics
             float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layerDepth)
 		{
             CheckValid(spriteFont, text);
-
-            var source = new SpriteFont.CharacterSource(text);
                         
-            SpriteBatch spriteBatch = this;
-            SpriteFont.CharacterSource text2 = source;
-            SpriteEffects effect=effects;
-            float depth = layerDepth;
-            
             var flipAdjustment = Vector2.Zero;
 
-            var flippedVert = (effect & SpriteEffects.FlipVertically) == SpriteEffects.FlipVertically;
-            var flippedHorz = (effect & SpriteEffects.FlipHorizontally) == SpriteEffects.FlipHorizontally;
+            var flippedVert = (effects & SpriteEffects.FlipVertically) == SpriteEffects.FlipVertically;
+            var flippedHorz = (effects & SpriteEffects.FlipHorizontally) == SpriteEffects.FlipHorizontally;
 
             if (flippedVert || flippedHorz)
             {
+                var source = new SpriteFont.CharacterSource(text);
                 Vector2 size;
-                spriteFont.MeasureString(ref text2, out size);
+                spriteFont.MeasureString(ref source, out size);
 
                 if (flippedHorz)
                 {
@@ -1238,9 +1227,9 @@ namespace Microsoft.Xna.Framework.Graphics
             var offset = Vector2.Zero;
             var firstGlyphOfLine = true;
 
-			for (var i = 0; i < text2.Length; ++i)
+			for (var i = 0; i < text.Length; ++i)
             {
-                var c = text2[i];
+                var c = text[i];
 
                 if (c == '\r')
                     continue;
@@ -1287,15 +1276,15 @@ namespace Microsoft.Xna.Framework.Graphics
                                             currentGlyph.BoundsInTexture.Width * scale.X,
                                             currentGlyph.BoundsInTexture.Height * scale.Y);
 
-				spriteBatch.DrawInternal(
+				DrawInternal(
                     spriteFont.Texture, destRect, currentGlyph.BoundsInTexture,
-					color, rotation, Vector2.Zero, effect, depth, false);
+					color, rotation, Vector2.Zero, effects, layerDepth, false);
 
                 offset.X += currentGlyph.Width + currentGlyph.RightSideBearing;
 			}
 
 			// We need to flush if we're using Immediate sort mode.
-			spriteBatch.FlushIfNeeded();
+			FlushIfNeeded();
 		}
 
         /// <summary>
