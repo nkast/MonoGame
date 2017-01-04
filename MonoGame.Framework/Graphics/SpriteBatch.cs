@@ -946,6 +946,7 @@ namespace Microsoft.Xna.Framework.Graphics
             }
             
             Matrix transformation = Matrix.Identity;
+            float cos = 0, sin = 0;
             if (rotation == 0)
             {
                 transformation.M11 = (flippedHorz ? -scale.X : scale.X);
@@ -955,8 +956,8 @@ namespace Microsoft.Xna.Framework.Graphics
             }
             else
             {
-                var cos = (float)Math.Cos(rotation);
-                var sin = (float)Math.Sin(rotation);
+                cos = (float)Math.Cos(rotation);
+                sin = (float)Math.Sin(rotation);
                 transformation.M11 = (flippedHorz ? -scale.X : scale.X) * cos;
                 transformation.M12 = (flippedHorz ? -scale.X : scale.X) * sin;
                 transformation.M21 = (flippedVert ? -scale.Y : scale.Y) * (-sin);
@@ -1074,8 +1075,8 @@ namespace Microsoft.Xna.Framework.Graphics
                             0,
                             currentGlyph.BoundsInTexture.Width * scale.X,
                             currentGlyph.BoundsInTexture.Height * scale.Y,
-                            (float)Math.Sin(rotation),
-                            (float)Math.Cos(rotation),
+                            sin,
+                            cos,
                             color,
                             _texCoordTL,
                             _texCoordBR,
@@ -1254,6 +1255,7 @@ namespace Microsoft.Xna.Framework.Graphics
             }
             
             Matrix transformation = Matrix.Identity;
+            float cos = 0, sin = 0;
             if (rotation == 0)
             {
                 transformation.M11 = (flippedHorz ? -scale.X : scale.X);
@@ -1263,8 +1265,8 @@ namespace Microsoft.Xna.Framework.Graphics
             }
             else
             {
-                var cos = (float)Math.Cos(rotation);
-                var sin = (float)Math.Sin(rotation);
+                cos = (float)Math.Cos(rotation);
+                sin = (float)Math.Sin(rotation);
                 transformation.M11 = (flippedHorz ? -scale.X : scale.X) * cos;
                 transformation.M12 = (flippedHorz ? -scale.X : scale.X) * sin;
                 transformation.M21 = (flippedVert ? -scale.Y : scale.Y) * (-sin);
@@ -1382,8 +1384,8 @@ namespace Microsoft.Xna.Framework.Graphics
                             0,
                             currentGlyph.BoundsInTexture.Width * scale.X,
                             currentGlyph.BoundsInTexture.Height * scale.Y,
-                            (float)Math.Sin(rotation),
-                            (float)Math.Cos(rotation),
+                            sin,
+                            cos,
                             color,
                             _texCoordTL,
                             _texCoordBR,
