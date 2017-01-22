@@ -180,7 +180,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 var startIndex = 0;
                 var index = 0;
                 Texture2D tex = null;
-                var texIndex = 0;
+                var texIndex = -1;
 
                 int numBatchesToProcess = batchCount;
                 if (numBatchesToProcess > MaxBatchSize)
@@ -200,13 +200,22 @@ namespace Microsoft.Xna.Framework.Graphics
                         var shouldFlush = !ReferenceEquals(item.Texture, tex);
                         if (shouldFlush)
                         {
-                            FlushVertexArray(startIndex, index, effect, tex);
+                            if (texIndex < 1)
+                            {
+                                tex = item.Texture;
+                                texIndex++;
+                                _device.Textures[texIndex] = tex;
+                            }
+                            else
+                            {
+                                FlushVertexArray(startIndex, index, effect, tex);
 
-                            tex = item.Texture;
-                            startIndex = index = 0;
-                            vertexArrayPtr = vertexArrayFixedPtr;
-                            texIndex = 0;
-                            _device.Textures[texIndex] = tex;
+                                tex = item.Texture;
+                                startIndex = index = 0;
+                                vertexArrayPtr = vertexArrayFixedPtr;
+                                texIndex = 0;
+                                _device.Textures[texIndex] = tex;
+                            }
                         }
 
                         // store the SpriteBatchItem data in our vertexArray
