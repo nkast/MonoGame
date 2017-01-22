@@ -200,7 +200,7 @@ namespace Microsoft.Xna.Framework.Graphics
                         var shouldFlush = !ReferenceEquals(item.Texture, tex);
                         if (shouldFlush)
                         {
-                            if (texIndex < 3)
+                            if (texIndex < 7)
                             {
                                 tex = item.Texture;
                                 texIndex++;
