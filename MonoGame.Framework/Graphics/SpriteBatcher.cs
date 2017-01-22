@@ -52,7 +52,7 @@ namespace Microsoft.Xna.Framework.Graphics
         /// </summary>
         private short[] _index;
 
-        private VertexPositionColorTexture[] _vertexArray;
+        private VertexPositionColorTexture2[] _vertexArray;
 
 		public SpriteBatcher (GraphicsDevice device)
 		{
@@ -135,7 +135,7 @@ namespace Microsoft.Xna.Framework.Graphics
             }
             _index = newIndex;
 
-            _vertexArray = new VertexPositionColorTexture[4 * numBatchItems];
+            _vertexArray = new VertexPositionColorTexture2[4 * numBatchItems];
         }
                 
         /// <summary>
@@ -180,6 +180,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 var startIndex = 0;
                 var index = 0;
                 Texture2D tex = null;
+                var texIndex = 0;
 
                 int numBatchesToProcess = batchCount;
                 if (numBatchesToProcess > MaxBatchSize)
@@ -187,7 +188,7 @@ namespace Microsoft.Xna.Framework.Graphics
                     numBatchesToProcess = MaxBatchSize;
                 }
                 // Avoid the array checking overhead by using pointer indexing!
-                fixed (VertexPositionColorTexture* vertexArrayFixedPtr = _vertexArray)
+                fixed (VertexPositionColorTexture2* vertexArrayFixedPtr = _vertexArray)
                 {
                     var vertexArrayPtr = vertexArrayFixedPtr;
 
@@ -204,14 +205,19 @@ namespace Microsoft.Xna.Framework.Graphics
                             tex = item.Texture;
                             startIndex = index = 0;
                             vertexArrayPtr = vertexArrayFixedPtr;
-                            _device.Textures[0] = tex;
+                            texIndex = 0;
+                            _device.Textures[texIndex] = tex;
                         }
 
                         // store the SpriteBatchItem data in our vertexArray
                         *(vertexArrayPtr+0) = item.vertexTL;
+                        (*(vertexArrayPtr+0)).TextureCoordinate.Z = texIndex;
                         *(vertexArrayPtr+1) = item.vertexTR;
+                        (*(vertexArrayPtr+1)).TextureCoordinate.Z = texIndex;
                         *(vertexArrayPtr+2) = item.vertexBL;
+                        (*(vertexArrayPtr+2)).TextureCoordinate.Z = texIndex;
                         *(vertexArrayPtr+3) = item.vertexBR;
+                        (*(vertexArrayPtr+3)).TextureCoordinate.Z = texIndex;
 
                         // Release the texture.
                         item.Texture = null;
@@ -261,7 +267,7 @@ namespace Microsoft.Xna.Framework.Graphics
                         _index,
                         0,
                         (vertexCount / 4) * 2,
-                        VertexPositionColorTexture.VertexDeclaration);
+                        VertexPositionColorTexture2.VertexDeclaration);
                 }
             }
             else
@@ -275,7 +281,7 @@ namespace Microsoft.Xna.Framework.Graphics
                     _index,
                     0,
                     (vertexCount / 4) * 2,
-                    VertexPositionColorTexture.VertexDeclaration);
+                    VertexPositionColorTexture2.VertexDeclaration);
             }
         }
 	}

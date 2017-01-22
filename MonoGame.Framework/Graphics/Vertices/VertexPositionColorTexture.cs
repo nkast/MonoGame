@@ -68,4 +68,71 @@ namespace Microsoft.Xna.Framework.Graphics
             VertexDeclaration = new VertexDeclaration(elements);
         }
     }
+        
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct VertexPositionColorTexture2 : IVertexType
+    {
+        public Vector3 Position;
+        public Color Color;
+        public Vector3 TextureCoordinate;
+        public static readonly VertexDeclaration VertexDeclaration;
+        
+        public VertexPositionColorTexture2(Vector3 position, Color color, Vector3 textureCoordinate)
+        {
+            Position = position;
+            Color = color;
+            TextureCoordinate = textureCoordinate;
+        }
+		
+        VertexDeclaration IVertexType.VertexDeclaration
+        {
+            get
+            {
+                return VertexDeclaration;
+            }
+        }
+
+        public override int GetHashCode()
+        {
+            // TODO: FIc gethashcode
+            return 0;
+        }
+
+        public override string ToString()
+        {
+            return "{{Position:" + this.Position + " Color:" + this.Color + " TextureCoordinate:" + this.TextureCoordinate + "}}";
+        }
+
+        public static bool operator ==(VertexPositionColorTexture2 left, VertexPositionColorTexture2 right)
+        {
+            return (((left.Position == right.Position) && (left.Color == right.Color)) && (left.TextureCoordinate == right.TextureCoordinate));
+        }
+
+        public static bool operator !=(VertexPositionColorTexture2 left, VertexPositionColorTexture2 right)
+        {
+            return !(left == right);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj == null)
+                return false;
+
+            if (obj.GetType() != base.GetType())
+                return false;
+
+            return (this == ((VertexPositionColorTexture2)obj));
+        }
+
+        static VertexPositionColorTexture2()
+        {
+            var elements = new VertexElement[] 
+            { 
+                new VertexElement(0, VertexElementFormat.Vector3, VertexElementUsage.Position, 0), 
+                new VertexElement(12, VertexElementFormat.Color, VertexElementUsage.Color, 0), 
+                new VertexElement(16, VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0) 
+            };
+            VertexDeclaration = new VertexDeclaration(elements);
+        }
+    }
 }
