@@ -1,0 +1,72 @@
+Draw: 9,50887738525429
+Perf: 0,9027060701849
+Frames: 3152
+Average Draw(ms): 3.01678 (3.01678/3.01678 = 100.0%) 100%
+Average Perf(ms): 0.28639
+
+Draw: 9,52938334341374
+Perf: 0,871762821811154
+Frames: 3060
+Average Draw(ms): 3.11418 
+Average Perf(ms): 0.28489
+
+
+------------------ 2 tex
+
+Draw: 7,05934231864663
+Perf: 1,31023118860076
+Frames: 4644
+Average Draw(ms): 1.52010
+Average Perf(ms): 0.28213
+
+Draw: 6,8404642908526
+Perf: 1,2838023408003
+Frames: 4642
+Average Draw(ms): 1.47360 (1.47360/3.01678 = 48.8%) 205%
+Average Perf(ms): 0.27656
+
+
+------------------ 4 tex
+
+Draw: 4,35803530895687
+Perf: 1,28578967438599
+Frames: 4698
+Average Draw(ms): 0.92764
+Average Perf(ms): 0.27369
+
+Draw: 4,42863722903331
+Perf: 1,28993789713497
+Frames: 4706
+Average Draw(ms): 0.94106 (0.94106/3.01678 = 31.2%) 321%
+Average Perf(ms): 0.27410
+
+
+------------------ 8 tex
+
+Draw: 3,04447918660053
+Perf: 1,28604536330734
+Frames: 4685
+Average Draw(ms): 0.64984
+Average Perf(ms): 0.27450
+
+Draw: 3,08078848010012
+Perf: 1,28887896366718
+Frames: 4678
+Average Draw(ms): 0.65857 (0.65857/3.01678 = 21.8%) 458%
+Average Perf(ms): 0.27552
+
+
+------------------ 16 tex
+
+Draw: 2,44946515548764
+Perf: 1,30008087620075
+Frames: 4678
+Average Draw(ms): 0.52361 (0.52361/3.01678 = 16.3%)  576%
+Average Perf(ms): 0.27791
+
+Draw: 2,51966325329057
+Perf: 1,31276510003367
+Frames: 4706
+Average Draw(ms): 0.53542 (0.53542/3.01678 = 17.7%)  563%
+Average Perf(ms): 0.27896
+
