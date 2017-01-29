@@ -605,7 +605,7 @@
       <Services>WebGraphics</Services>
     </Compile>
     <Compile Include="Graphics\GraphicsContext.cs">
-      <Services>DirectXGraphics,OpenGLGraphics</Services>
+      <Services>DirectXGraphics,OpenGLGraphics,WebGraphics</Services>
     </Compile>
     <Compile Include="Graphics\GraphicsContext.DirectX.cs">
       <Services>DirectXGraphics</Services>
@@ -616,6 +616,9 @@
     </Compile>
     <Compile Include="Graphics\GraphicsContext.SDL.cs">
       <Platforms>WindowsGL,Linux</Platforms>
+    </Compile>
+    <Compile Include="Graphics\GraphicsContext.Web.cs">
+      <Services>WebGraphics</Services>
     </Compile>
     <Compile Include="Graphics\GraphicsDevice.cs" />
     <Compile Include="Graphics\GraphicsDevice.DirectX.cs">
