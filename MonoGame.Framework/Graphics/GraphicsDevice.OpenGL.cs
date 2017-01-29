@@ -63,7 +63,6 @@ namespace Microsoft.Xna.Framework.Graphics
 
         // Keeps track of last applied state to avoid redundant OpenGL calls
         internal bool _lastBlendEnable = false;
-        internal BlendState _lastBlendState = new BlendState();
         internal DepthStencilState _lastDepthStencilState = new DepthStencilState();
         internal RasterizerState _lastRasterizerState = new RasterizerState();
         private Vector4 _lastClearColor = Vector4.Zero;
@@ -293,7 +292,7 @@ namespace Microsoft.Xna.Framework.Graphics
             }
 
             // Force resetting states
-            this.PlatformApplyBlend(true);
+            Context.ApplyBlend(true);
             this.DepthStencilState.PlatformApplyState(this, true);
             this.RasterizerState.PlatformApplyState(this, true);            
 
@@ -832,26 +831,6 @@ namespace Microsoft.Xna.Framework.Graphics
         internal void PlatformBeginApplyState()
         {
             Threading.EnsureUIThread();
-        }
-
-        private void PlatformApplyBlend(bool force = false)
-        {
-            _actualBlendState.PlatformApplyState(this, force);
-            ApplyBlendFactor(force);
-        }
-
-        private void ApplyBlendFactor(bool force)
-        {
-            if (force || BlendFactor != _lastBlendState.BlendFactor)
-            {
-                GL.BlendColor(
-                    this.BlendFactor.R/255.0f,
-                    this.BlendFactor.G/255.0f,
-                    this.BlendFactor.B/255.0f,
-                    this.BlendFactor.A/255.0f);
-                GraphicsExtensions.CheckGLError();
-                _lastBlendState.BlendFactor = this.BlendFactor;
-            }
         }
 
         internal void PlatformApplyState(bool applyShaders)
