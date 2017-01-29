@@ -16,6 +16,8 @@ namespace Microsoft.Xna.Framework.Graphics
 
         private bool _isDisposed;
 
+        private GraphicsContext _context;
+
         private Color _blendFactor = Color.White;
         private bool _blendFactorDirty;
 
@@ -56,6 +58,8 @@ namespace Microsoft.Xna.Framework.Graphics
         private readonly RenderTargetBinding[] _currentRenderTargetBindings = new RenderTargetBinding[4];
         private int _currentRenderTargetCount;
         private readonly RenderTargetBinding[] _tempRenderTargetBinding = new RenderTargetBinding[1];
+
+        internal GraphicsContext Context { get { return _context; } }
 
         internal GraphicsCapabilities GraphicsCapabilities { get; private set; }
 
