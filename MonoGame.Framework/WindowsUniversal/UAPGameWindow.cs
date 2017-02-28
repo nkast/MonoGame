@@ -25,7 +25,7 @@ namespace Microsoft.Xna.Framework
         private CoreWindow _coreWindow;
         private DisplayInformation _dinfo;
         private ApplicationView _appView;
-        private SwapChainPanel _swapChainPanel;
+        private GenericSwapChainPanel _swapChainPanel;
         private Rectangle _viewBounds;
 
         private object _eventLocker = new object();
@@ -98,10 +98,10 @@ namespace Microsoft.Xna.Framework
             Instance = new UAPGameWindow();
         }
 
-        public void Initialize(CoreWindow coreWindow, UIElement inputElement, TouchQueue touchQueue)
+        public void Initialize(CoreWindow coreWindow, GenericSwapChainPanel swapChainPanel, TouchQueue touchQueue)
         {
             _coreWindow = coreWindow;
-            _windowEvents = new InputEvents(_coreWindow, inputElement, touchQueue);
+            _windowEvents = new InputEvents(_coreWindow, swapChainPanel.Panel, touchQueue);
 
 			_dinfo = DisplayInformation.GetForCurrentView();
             _appView = ApplicationView.GetForCurrentView();
@@ -113,9 +113,9 @@ namespace Microsoft.Xna.Framework
 
             _orientation = ToOrientation(_dinfo.CurrentOrientation);
             _dinfo.OrientationChanged += DisplayProperties_OrientationChanged;
-            _swapChainPanel = inputElement as SwapChainPanel;
+            _swapChainPanel = swapChainPanel;
 
-            _swapChainPanel.SizeChanged += SwapChain_SizeChanged;
+            _swapChainPanel.Panel.SizeChanged += SwapChain_SizeChanged;
 
             _coreWindow.Closed += Window_Closed;
             _coreWindow.Activated += Window_FocusChanged;
