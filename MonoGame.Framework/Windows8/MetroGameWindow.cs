@@ -100,10 +100,10 @@ namespace Microsoft.Xna.Framework
             Instance = new MetroGameWindow();
         }
 
-        public void Initialize(CoreWindow coreWindow, UIElement inputElement, TouchQueue touchQueue)
+        public void Initialize(CoreWindow coreWindow, GenericSwapChainPanel swapChainPanel, TouchQueue touchQueue)
         {
             _coreWindow = coreWindow;
-            _windowEvents = new InputEvents(_coreWindow, inputElement, touchQueue);
+            _windowEvents = new InputEvents(_coreWindow, swapChainPanel.Panel, touchQueue);
 
             _orientation = ToOrientation(DisplayProperties.CurrentOrientation);
             DisplayProperties.OrientationChanged += DisplayProperties_OrientationChanged;

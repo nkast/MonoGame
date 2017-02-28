@@ -53,11 +53,7 @@ namespace Microsoft.Xna.Framework.Graphics
         SharpDX.Direct2D1.Bitmap1 _bitmapTarget;
         SharpDX.DXGI.SwapChain1 _swapChain;
 
-#if WINDOWS_UAP
-		SwapChainPanel _swapChainPanel;
-#else
-		SwapChainBackgroundPanel _swapChainBackgroundPanel;
-#endif
+        GenericSwapChainPanel _swapChainPanel;
 
 		float _dpi; 
 #endif
@@ -352,7 +348,7 @@ namespace Microsoft.Xna.Framework.Graphics
 #if WINDOWS_UAP
 					PresentationParameters.SwapChainPanel == null)
 #else
-					(PresentationParameters.DeviceWindowHandle == IntPtr.Zero && PresentationParameters.SwapChainBackgroundPanel == null))
+					(PresentationParameters.DeviceWindowHandle == IntPtr.Zero && PresentationParameters.SwapChainPanel == null))
 #endif
 			{
                 if (_swapChain != null)
@@ -370,9 +366,9 @@ namespace Microsoft.Xna.Framework.Graphics
 			{
 				_swapChainPanel = null;
 #else
-			if (PresentationParameters.SwapChainBackgroundPanel != _swapChainBackgroundPanel)
+			if (PresentationParameters.SwapChainPanel != _swapChainPanel)
             {
-                _swapChainBackgroundPanel = null;
+                _swapChainPanel = null;
 #endif
 
 				if (_swapChain != null)
@@ -446,27 +442,14 @@ namespace Microsoft.Xna.Framework.Graphics
                     }
                     else
                     {
-#if WINDOWS_UAP
-						_swapChainPanel = PresentationParameters.SwapChainPanel;
-						using (var nativePanel = ComObject.As<SharpDX.DXGI.ISwapChainPanelNative>(PresentationParameters.SwapChainPanel))
-						{
-							_swapChain = new SwapChain1(dxgiFactory2, dxgiDevice2, ref desc, null);
-							nativePanel.SwapChain = _swapChain;
-						}
-#else
-						_swapChainBackgroundPanel = PresentationParameters.SwapChainBackgroundPanel;
-                        using (var nativePanel = ComObject.As<SharpDX.DXGI.ISwapChainBackgroundPanelNative>(PresentationParameters.SwapChainBackgroundPanel))
-                        {
-#if WINDOWS_PHONE81 || WINRT
+#if WINDOWS_UAP || WINDOWS_PHONE81 || WINRT
                             _swapChain = new SwapChain1(dxgiFactory2, dxgiDevice2, ref desc, null);
 #else
                             _swapChain = dxgiFactory2.CreateSwapChainForComposition(_d3dDevice, ref desc, null);
 #endif
-
-                            nativePanel.SwapChain = _swapChain;
+						_swapChainPanel = PresentationParameters.SwapChainPanel;         
+                        _swapChainPanel.SetSwapChain(_swapChain);
                         }
-#endif
-                    }
 
                     // Ensure that DXGI does not queue more than one frame at a time. This both reduces 
                     // latency and ensures that the application will only render after each VSync, minimizing 
@@ -480,9 +463,9 @@ namespace Microsoft.Xna.Framework.Graphics
 #if WINDOWS_UAP
             // Counter act the composition scale of the render target as 
             // we already handle this in the platform window code. 
+            var inverseScale = new RawMatrix3x2();
             using (var swapChain2 = _swapChain.QueryInterface<SwapChain2>())
             {
-                var inverseScale = new RawMatrix3x2();
                 inverseScale.M11 = 1.0f / PresentationParameters.SwapChainPanel.CompositionScaleX;
                 inverseScale.M22 = 1.0f / PresentationParameters.SwapChainPanel.CompositionScaleY;
                 swapChain2.MatrixTransform = inverseScale;
@@ -569,7 +552,7 @@ namespace Microsoft.Xna.Framework.Graphics
             if (presentationParameters.SwapChainPanel == null)
                 throw new ArgumentException("PresentationParameters.SwapChainPanel must not be null.");
 #elif WINDOWS_STOREAPP
-            if (presentationParameters.DeviceWindowHandle == IntPtr.Zero && presentationParameters.SwapChainBackgroundPanel == null)
+            if (presentationParameters.DeviceWindowHandle == IntPtr.Zero && presentationParameters.SwapChainPanel == null)
                 throw new ArgumentException("PresentationParameters.DeviceWindowHandle or PresentationParameters.SwapChainBackgroundPanel must be not null.");
 #else
             if (presentationParameters.DeviceWindowHandle == IntPtr.Zero)
