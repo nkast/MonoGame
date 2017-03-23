@@ -65,9 +65,9 @@ namespace Microsoft.Xna.Framework.Graphics
                 
                 // TODO: We need to deal with threaded contexts here!
                 var subresourceIndex = CalculateSubresourceIndex(arraySlice, level);
-                var d3dContext = GraphicsDevice._d3dContext;
-                lock (d3dContext)
-                    d3dContext.UpdateSubresource(GetTexture(), subresourceIndex, region, dataPtr, GetPitch(rect.Width), 0);
+                var context = GraphicsDevice.Context;
+                lock (context)
+                    context._d3dContext.UpdateSubresource(GetTexture(), subresourceIndex, region, dataPtr, GetPitch(rect.Width), 0);
             }
             finally
             {
@@ -102,10 +102,10 @@ namespace Microsoft.Xna.Framework.Graphics
             // Save sampling description.
             _sampleDescription = desc.SampleDescription;
 
-            var d3dContext = GraphicsDevice._d3dContext;
+            var context = GraphicsDevice.Context;
             using (var stagingTex = new SharpDX.Direct3D11.Texture2D(GraphicsDevice._d3dDevice, desc))
             {
-                lock (d3dContext)
+                lock (context)
                 {
                     var subresourceIndex = CalculateSubresourceIndex(arraySlice, level);
 
@@ -113,13 +113,13 @@ namespace Microsoft.Xna.Framework.Graphics
                     var elementsInRow = rect.Width;
                     var rows = rect.Height;
                     var region = new ResourceRegion(rect.Left, rect.Top, 0, rect.Right, rect.Bottom, 1);
-                    d3dContext.CopySubresourceRegion(GetTexture(), subresourceIndex, region, stagingTex, 0);
+                    context._d3dContext.CopySubresourceRegion(GetTexture(), subresourceIndex, region, stagingTex, 0);
 
                     // Copy the data to the array.
                     DataStream stream = null;
                     try
                     {
-                        var databox = d3dContext.MapSubresource(stagingTex, 0, MapMode.Read, MapFlags.None, out stream);
+                        var databox = context._d3dContext.MapSubresource(stagingTex, 0, MapMode.Read, MapFlags.None, out stream);
 
                         var elementSize = _format.GetSize();
                         if (_format.IsCompressedFormat())

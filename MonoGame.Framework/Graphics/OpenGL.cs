@@ -1216,11 +1216,6 @@ namespace OpenGL
 
         static partial void LoadPlatformEntryPoints();
 
-        public static IGraphicsContext CreateContext(IWindowInfo info)
-        {
-            return PlatformCreateContext(info);
-        }
-
         /* Helper Functions */
 
         public static void Uniform1 (int location, int value) {

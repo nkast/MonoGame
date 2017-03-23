@@ -3,14 +3,17 @@
 // file 'LICENSE.txt', which is part of this source code package.
 
 using System;
+using OpenGL;
 
-namespace OpenGL
+namespace Microsoft.Xna.Framework.Graphics
 {
-    public class GraphicsContext : IGraphicsContext, IDisposable
+    internal partial class GraphicsContext : IGraphicsContext, IDisposable
     {
         private IntPtr _context;
         private IntPtr _winHandle;
-        private bool _disposed;
+
+        // Keeps track of last applied state to avoid redundant OpenGL calls
+        internal BlendState _lastBlendState = new BlendState();
 
         public int SwapInterval
         {
@@ -29,10 +32,9 @@ namespace OpenGL
             get { return _disposed; }
         }
 
-        public GraphicsContext(IWindowInfo info)
+        public GraphicsContext(GraphicsDevice device, IWindowInfo info)
         {
-            if (_disposed)
-                return;
+            Initialize(device);
             
             SetWindowHandle(info);
             _context = Sdl.GL.CreateContext(_winHandle);
@@ -50,6 +52,37 @@ namespace OpenGL
             }
         }
 
+
+        private void SetWindowHandle(IWindowInfo info)
+        {
+            if (info == null)
+                _winHandle = IntPtr.Zero;
+            else
+                _winHandle = info.Handle;
+        }
+
+        private void PlatformApplyBlend(bool force = false)
+        {
+            _actualBlendState.PlatformApplyState(_device, force);
+            ApplyBlendFactor(force);
+        }
+
+        private void ApplyBlendFactor(bool force)
+        {
+            if (force || BlendFactor != _lastBlendState.BlendFactor)
+            {
+                GL.BlendColor(
+                    this.BlendFactor.R/255.0f,
+                    this.BlendFactor.G/255.0f,
+                    this.BlendFactor.B/255.0f,
+                    this.BlendFactor.A/255.0f);
+                GraphicsExtensions.CheckGLError();
+                _lastBlendState.BlendFactor = this.BlendFactor;
+            }
+        }
+
+        
+        #region Implement IGraphicsContext
         public void MakeCurrent(IWindowInfo info)
         {
             if (_disposed)
@@ -67,21 +100,20 @@ namespace OpenGL
             Sdl.GL.SwapWindow(_winHandle);
         }
 
-        public void Dispose()
-        {
-            if (_disposed)
-                return;
-            
-            Sdl.GL.DeleteContext(_context);
-            _disposed = true;
-        }
+        #endregion
+        
+        #region Implement IDisposable
+        private void PlatformDispose(bool disposing)
+        {            
+            if (disposing)
+            {
+                // Release managed objects
+                // ...
+            }
 
-        private void SetWindowHandle(IWindowInfo info)
-        {
-            if (info == null)
-                _winHandle = IntPtr.Zero;
-            else
-                _winHandle = info.Handle;
+            // Release native objects
+            Sdl.GL.DeleteContext(_context);
         }
+        #endregion
     }
 }
