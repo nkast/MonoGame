@@ -9,6 +9,22 @@ namespace Microsoft.Xna.Framework.Input.Touch
 {
     public partial class TouchPanelState
     {
+        private readonly ConcurrentQueue<TouchEvent> _queue = new ConcurrentQueue<TouchEvent>();
+
+        private void PlatformAddEvent(int id, TouchLocationState state, Vector2 position, bool isMouse)
+        {
+            /// Stores touches to apply them once a frame for platforms that dispatch touches asynchronously
+            /// while user code is running.
+            _queue.Enqueue(new TouchEvent(id, state, ref position, isMouse));
+        }
+
+        private void PlatformProcessQueued()
+        {
+            TouchEvent ev;
+            while (_queue.TryDequeue(out ev))
+                AddEventInternal(ev.Id, ev.State, ev.Position, ev.IsMouse);
+        }
+
         private struct TouchEvent
         {
             public readonly int Id;
@@ -23,23 +39,6 @@ namespace Microsoft.Xna.Framework.Input.Touch
                 Position = position;
                 IsMouse = isMouse;
             }
-        }
-
-        private readonly ConcurrentQueue<TouchEvent> _queue = new ConcurrentQueue<TouchEvent>();
-        
-
-        private void PlatformAddEvent(int id, TouchLocationState state, Vector2 position, bool isMouse)
-        {
-            /// Stores touches to apply them once a frame for platforms that dispatch touches asynchronously
-            /// while user code is running.
-            _queue.Enqueue(new TouchEvent(id, state, ref position, isMouse));
-        }
-
-        private void PlatformProcessQueued()
-        {
-            TouchEvent ev;
-            while (_queue.TryDequeue(out ev))
-                AddEventInternal(ev.Id, ev.State, ev.Position, ev.IsMouse);
         }
     }
 }
