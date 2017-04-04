@@ -69,6 +69,7 @@ namespace Microsoft.Xna.Framework
                 Game.DoInitialize();
                 _initialized = true;
             }
+            Window.TouchPanelState.ProcessQueued();
 
             return true;
         }

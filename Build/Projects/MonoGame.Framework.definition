@@ -1052,10 +1052,10 @@
     <Compile Include="Input\Touch\TouchPanelCapabilities.cs" />
     <Compile Include="Input\Touch\TouchPanelState.cs" />
     <Compile Include="Input\Touch\TouchPanelState.Sync.cs">
-      <ExcludePlatforms>Windows8,WindowsPhone81,WindowsUniversal</ExcludePlatforms>
+      <ExcludePlatforms>Android,Windows8,WindowsPhone81,WindowsUniversal</ExcludePlatforms>
     </Compile>
     <Compile Include="Input\Touch\TouchPanelState.Async.cs">
-      <Platforms>Windows8,WindowsPhone81,WindowsUniversal</Platforms>
+      <Platforms>Android,Windows8,WindowsPhone81,WindowsUniversal</Platforms>
     </Compile>
 
     <Page Include="Themes\generic.xaml">
