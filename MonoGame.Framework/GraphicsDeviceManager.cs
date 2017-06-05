@@ -320,6 +320,11 @@ namespace Microsoft.Xna.Framework
         /// </summary>
         public void ApplyChanges()
         {
+#if WINDOWS_UAP
+            if (_graphicsDevice == null)
+                return;
+#endif
+
             // If the device hasn't been created then create it now.
             if (_graphicsDevice == null)
                 CreateDevice();
