@@ -28,7 +28,7 @@ namespace Microsoft.Xna.Framework.Content
         private Dictionary<string, object> loadedAssets = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 		private List<IDisposable> disposableAssets = new List<IDisposable>();
         private bool disposed;
-        private byte[] scratchBuffer;
+        private static ContentBufferPool _bufferPool = new ContentBufferPool();
 
 		private static object ContentManagerLock = new object();
         private static List<WeakReference> ContentManagers = new List<WeakReference>();
@@ -189,7 +189,6 @@ namespace Microsoft.Xna.Framework.Content
                     Unload();
                 }
 
-                scratchBuffer = null;
 				disposed = true;
 			}
 		}
@@ -480,10 +479,57 @@ namespace Microsoft.Xna.Framework.Content
 
         internal byte[] GetScratchBuffer(int size)
         {            
-            size = Math.Max(size, 1024 * 1024);
-            if (scratchBuffer == null || scratchBuffer.Length < size)
-                scratchBuffer = new byte[size];
-            return scratchBuffer;
+            return _bufferPool.GetBuffer(size);
         }
+                 
+        internal void ReturnScratchBuffer(byte[] buffer)
+        {
+            _bufferPool.ReturnBuffer(buffer);
+        }
+                
+        private class ContentBufferPool: IComparer<byte[]>
+        {
+            public const int MinimumBufferSize = 2 * 1024 * 1024;
+            private SortedSet<byte[]> _bufferSet;
+                
+            public ContentBufferPool()
+            {
+                _bufferSet = new SortedSet<byte[]>(this);
+            }
+
+            public byte[] GetBuffer(int size)
+            {   
+                lock (_bufferSet)
+                {
+                    foreach (var buffer in _bufferSet)
+                    {
+                        if (buffer.Length >= size)
+                        {
+                            _bufferSet.Remove(buffer);
+                            return buffer;
+                        }
+                    }
+
+                    if(_bufferSet.Count >= 1)
+                        _bufferSet.Remove(_bufferSet.Max);
+                    int dataSize = Math.Max(MinimumBufferSize, size);
+                    return new byte[dataSize];
+                }
+            }
+        
+            internal void ReturnBuffer(byte[] buffer)
+            {
+                lock (_bufferSet)
+                 {
+                    _bufferSet.Add(buffer);
+                 }
+            }
+        
+            public int Compare(byte[] x, byte[] y)
+            {
+                return (x.Length - y.Length);
+            }
+        }
+
 	}
 }

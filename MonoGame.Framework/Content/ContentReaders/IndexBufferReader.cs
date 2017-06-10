@@ -25,6 +25,7 @@ namespace Microsoft.Xna.Framework.Content
             }
 
             indexBuffer.SetData(data, 0, dataSize);
+            input.ContentManager.ReturnScratchBuffer(data);
             return indexBuffer;
         }
     }

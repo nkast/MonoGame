@@ -49,6 +49,7 @@ namespace Microsoft.Xna.Framework.Content
 
             // Create the effect.
             var effect = new SoundEffect(header, data, dataSize, durationMs, loopStart, loopLength);
+            input.ContentManager.ReturnScratchBuffer(data);
 
             // Store the original asset name for debugging later.
             effect.Name = input.AssetName;

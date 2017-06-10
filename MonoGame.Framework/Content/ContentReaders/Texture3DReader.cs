@@ -34,6 +34,7 @@ namespace Microsoft.Xna.Framework.Content
                     byte[] data = reader.ContentManager.GetScratchBuffer(dataSize);
                     reader.Read(data, 0, dataSize);
                     texture.SetData(i, 0, 0, width, height, 0, depth, data, 0, dataSize);
+                    reader.ContentManager.ReturnScratchBuffer(data);
 
                     // Calculate dimensions of next mip level.
                     width = Math.Max(width >> 1, 1);
