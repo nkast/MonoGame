@@ -15,6 +15,11 @@
   <Import Project="MonoGame.Framework.Common.props" />
 
   <ItemGroup>
+    <Compile Remove="Graphics\SpriteBatcher.cs" />
+    <Compile Include="Platform\Graphics\SpriteBatcher.DirectX-OPT.cs" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <Compile Include="Platform\GamePlatform.Desktop.cs" />
     <Compile Include="Platform\Graphics\SwapChainRenderTarget.cs" />
     <Compile Include="Platform\Graphics\Texture2D.StbSharp.cs" />
