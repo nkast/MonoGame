@@ -10,11 +10,19 @@ using MonoGame.Utilities.Png;
 using SharpDX;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
+#if !WP8
 using SharpDX.WIC;
+#endif
 using MapFlags = SharpDX.Direct3D11.MapFlags;
 using Resource = SharpDX.Direct3D11.Resource;
 
-#if WINDOWS_UAP
+#if WP8
+using System.Threading;
+using System.Windows;
+using System.Windows.Media.Imaging;
+#endif
+
+#if WINDOWS_UAP || (W81 || WP81)
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
 using System.Threading.Tasks;
@@ -216,6 +224,27 @@ namespace Microsoft.Xna.Framework.Graphics
 
         private static Texture2D PlatformFromStream(GraphicsDevice graphicsDevice, Stream stream)
         {
+#if WP8
+            WriteableBitmap bitmap = null;
+            var waitEvent = new ManualResetEventSlim(false);
+            Deployment.Current.Dispatcher.BeginInvoke(() =>
+            {
+                    BitmapImage bitmapImage = new BitmapImage();
+                    bitmapImage.SetSource(stream);
+                    bitmap = new WriteableBitmap(bitmapImage);
+                    waitEvent.Set();
+            });
+            waitEvent.Wait();
+
+            // Convert from ARGB to ABGR 
+            ConvertToABGR(bitmap.PixelHeight, bitmap.PixelWidth, bitmap.Pixels);
+
+            Texture2D texture = new Texture2D(graphicsDevice, bitmap.PixelWidth, bitmap.PixelHeight);
+            texture.SetData<int>(bitmap.Pixels);
+            return texture;
+#endif
+#if !WP8
+
             if (!stream.CanSeek)
                 throw new NotSupportedException("stream must support seek operations");
 
@@ -234,13 +263,33 @@ namespace Microsoft.Xna.Framework.Graphics
                 toReturn._texture = sharpDxTexture;
             }
             return toReturn;
+#endif
         }
 
         private void PlatformSaveAsJpeg(Stream stream, int width, int height)
         {
-#if WINDOWS_UAP
+#if WINDOWS_UAP || (W81 || WP81)
             SaveAsImage(Windows.Graphics.Imaging.BitmapEncoder.JpegEncoderId, stream, width, height);
-#else
+#endif
+#if WP8
+            var pixelData = new byte[Width * Height * GraphicsExtensions.GetSize(Format)];
+            GetData(pixelData);
+
+            //We Must convert from BGRA to RGBA
+            ConvertToRGBA(Height, Width, pixelData);
+
+            var waitEvent = new ManualResetEventSlim(false);
+            Deployment.Current.Dispatcher.BeginInvoke(() =>
+            {
+                var bitmap = new WriteableBitmap(Width, Height);
+                System.Buffer.BlockCopy(pixelData, 0, bitmap.Pixels, 0, pixelData.Length);
+                bitmap.SaveJpeg(stream, width, height, 0, 100);
+                waitEvent.Set();
+            });
+
+            waitEvent.Wait();
+#endif
+#if !WINDOWS_UAP && !(W81 || WP81) && !WP8
             throw new NotImplementedException();
 #endif
         }
@@ -271,7 +320,7 @@ namespace Microsoft.Xna.Framework.Graphics
             pngWriter.Write(this, stream);
         }
 
-#if WINDOWS_UAP
+#if WINDOWS_UAP || (W81 || WP81)
         private void SaveAsImage(Guid encoderId, Stream stream, int width, int height)
         {
             var pixelData = new byte[Width * Height * GraphicsExtensions.GetSize(Format)];
@@ -297,6 +346,7 @@ namespace Microsoft.Xna.Framework.Graphics
             }).Wait();
         }
 #endif
+#if !WP8
 
         static unsafe SharpDX.Direct3D11.Texture2D CreateTex2DFromBitmap(BitmapSource bsource, GraphicsDevice device)
         {
@@ -360,6 +410,8 @@ namespace Microsoft.Xna.Framework.Graphics
             return fconv;
         }
 
+#endif
+
         protected internal virtual Texture2DDescription GetTexture2DDescription()
         {
             var desc = new Texture2DDescription();
@@ -402,6 +454,25 @@ namespace Microsoft.Xna.Framework.Graphics
 
         private void PlatformReload(Stream textureStream)
         {
+#if WP8
+            Deployment.Current.Dispatcher.BeginInvoke(() =>
+            {
+                try
+                {
+                    BitmapImage bitmapImage = new BitmapImage();
+                    bitmapImage.SetSource(textureStream);
+                    WriteableBitmap bitmap = new WriteableBitmap(bitmapImage);
+
+                    // Convert from ARGB to ABGR 
+                    ConvertToABGR(bitmap.PixelHeight, bitmap.PixelWidth, bitmap.Pixels);
+
+                    this.SetData<int>(bitmap.Pixels);
+
+                    textureStream.Dispose();
+                }
+                catch { }
+            });
+#endif
         }
     }
 }

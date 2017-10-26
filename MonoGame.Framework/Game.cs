@@ -5,7 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-#if WINDOWS_UAP
+#if WINDOWS_UAP || WINRT
 using System.Threading.Tasks;
 using Windows.ApplicationModel.Activation;
 #endif
@@ -78,6 +78,9 @@ namespace Microsoft.Xna.Framework
             // Allow some optional per-platform construction to occur too.
             PlatformConstruct();
 
+#if W81
+            Platform.ViewStateChanged += Platform_ApplicationViewChanged;
+#endif
         }
 
         ~Game()
@@ -133,7 +136,9 @@ namespace Microsoft.Xna.Framework
                         Platform.Activated -= OnActivated;
                         Platform.Deactivated -= OnDeactivated;
                         _services.RemoveService(typeof(GamePlatform));
-
+#if W81
+                        Platform.ViewStateChanged -= Platform_ApplicationViewChanged;
+#endif
                         Platform.Dispose();
                         Platform = null;
                     }
@@ -307,7 +312,12 @@ namespace Microsoft.Xna.Framework
         public event EventHandler<EventArgs> Disposed;
         public event EventHandler<EventArgs> Exiting;
 
-#if WINDOWS_UAP
+#if W81
+        [CLSCompliant(false)]
+        public event EventHandler<ViewStateChangedEventArgs> ApplicationViewChanged;
+#endif
+
+#if WINDOWS_UAP || WINRT
         [CLSCompliant(false)]
         public ApplicationExecutionState PreviousExecutionState { get; internal set; }
 #endif
@@ -316,7 +326,7 @@ namespace Microsoft.Xna.Framework
 
         #region Public Methods
 
-#if IOS
+#if IOS || W81
         [Obsolete("This platform's policy does not allow programmatically closing.", true)]
 #endif
         public void Exit()
@@ -436,7 +446,7 @@ namespace Microsoft.Xna.Framework
                 // NOTE: While sleep can be inaccurate in general it is 
                 // accurate enough for frame limiting purposes if some
                 // fluctuation is an acceptable result.
-#if WINDOWS_UAP
+#if WINDOWS_UAP || WINRT
                 Task.Delay(sleepTime).Wait();
 #else
                 System.Threading.Thread.Sleep(sleepTime);
@@ -610,6 +620,14 @@ namespace Microsoft.Xna.Framework
             EndRun();
 			DoExiting();
         }
+
+#if W81
+        private void Platform_ApplicationViewChanged(object sender, ViewStateChangedEventArgs e)
+        {
+            AssertNotDisposed();
+            EventHelpers.Raise(this, ApplicationViewChanged, e);
+        }
+#endif
 
         #endregion Event Handlers
 

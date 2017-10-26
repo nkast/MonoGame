@@ -47,6 +47,7 @@ An optional parameter which adds an assembly reference which contains importers,
 ```
 Set the target platform for this build. It must be a member of the TargetPlatform enum:
 * Windows
+* WindowsPhone
 * iOS
 * Android
 * DesktopGL

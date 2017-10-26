@@ -63,6 +63,11 @@ namespace Microsoft.Xna.Framework
             _preferredDepthStencilFormat = DepthFormat.Depth24;
             _synchronizedWithVerticalRetrace = true;
 
+#if WINRT   
+            var clientBounds = _game.Window.ClientBounds;         
+            _preferredBackBufferWidth = clientBounds.Width;
+            _preferredBackBufferHeight = clientBounds.Height;
+#else
             // Assume the window client size as the default back 
             // buffer resolution in the landscape orientation.
             var clientBounds = _game.Window.ClientBounds;
@@ -76,6 +81,7 @@ namespace Microsoft.Xna.Framework
                 _preferredBackBufferWidth = clientBounds.Height;
                 _preferredBackBufferHeight = clientBounds.Width;
             }
+#endif
 
             // Default to windowed mode... this is ignored on platforms that don't support it.
             _wantFullScreen = false;
@@ -179,7 +185,8 @@ namespace Microsoft.Xna.Framework
             EventHelpers.Raise(this, DeviceDisposing, e);
         }
 
-        protected void OnDeviceResetting(EventArgs e)
+        // TODO these should be made protected, but currently WP calls these in SurfaceUpdateHandler
+        internal void OnDeviceResetting(EventArgs e)
         {
             EventHelpers.Raise(this, DeviceResetting, e);
         }

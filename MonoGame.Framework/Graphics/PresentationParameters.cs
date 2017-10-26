@@ -4,7 +4,7 @@
 
 using System;
 
-#if WINDOWS_UAP
+#if WINDOWS_UAP || (W81 || WP81)
 using Windows.UI.Xaml.Controls;
 #endif
 
@@ -32,7 +32,9 @@ namespace Microsoft.Xna.Framework.Graphics
         private IntPtr deviceWindowHandle;
         private int multiSampleCount;
         private bool disposed;
+#if !WINRT
         private bool isFullScreen;
+#endif
         private bool hardwareModeSwitch = true;
 
         #endregion Private Fields
@@ -95,9 +97,14 @@ namespace Microsoft.Xna.Framework.Graphics
             set { deviceWindowHandle = value; }
         }
 
+
 #if WINDOWS_UAP
         [CLSCompliant(false)]
         public SwapChainPanel SwapChainPanel { get; set; }
+#endif
+#if (W81 || WP81)
+        [CLSCompliant(false)]
+        public GenericSwapChainPanel SwapChainPanel { get; set; }
 #endif
 
         /// <summary>
@@ -116,11 +123,19 @@ namespace Microsoft.Xna.Framework.Graphics
         {
 			get
             {
+#if WINRT
+                // Always return true for Windows 8
+                return true;
+#else
 				 return isFullScreen;
+#endif
             }
             set
             {
+#if !WINRT
+                // If we are not on windows 8 set the value otherwise ignore it.
                 isFullScreen = value;				
+#endif
 #if IOS && !TVOS
 				UIApplication.SharedApplication.StatusBarHidden = isFullScreen;
 #endif

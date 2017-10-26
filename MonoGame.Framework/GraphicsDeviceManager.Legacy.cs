@@ -6,7 +6,7 @@ using System;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input.Touch;
 
-#if WINDOWS_UAP
+#if WINDOWS_UAP || (W81 || WP81)
 using Windows.UI.Xaml.Controls;
 #endif
 
@@ -35,7 +35,7 @@ namespace Microsoft.Xna.Framework
         private bool _firstLaunch = true;
 #endif
 
-#if !WINRT || WINDOWS_UAP
+#if WINDOWS_UAP || !(WINRT)
         private bool _wantFullScreen = false;
 #endif
         public static readonly int DefaultBackBufferHeight = 480;
@@ -176,7 +176,10 @@ namespace Microsoft.Xna.Framework
             if (_graphicsDevice == null)
                 return;
 
-#if WINDOWS_UAP
+#if WP8
+            _graphicsDevice.GraphicsProfile = GraphicsProfile;
+            _graphicsDevice.PresentationParameters.DisplayOrientation = _game.Window.CurrentOrientation;
+#elif WINDOWS_UAP || (W81 || WP81)
 
             // TODO:  Does this need to occur here?
             _game.Window.SetSupportedOrientations(_supportedOrientations);
@@ -200,15 +203,15 @@ namespace Microsoft.Xna.Framework
 
 			// The graphics device can use a XAML panel or a window
 			// to created the default swapchain target.
-            if (this.SwapChainBackgroundPanel != null)
+            if (this.SwapChainPanel != null)
             {
                 _graphicsDevice.PresentationParameters.DeviceWindowHandle = IntPtr.Zero;
-                _graphicsDevice.PresentationParameters.SwapChainBackgroundPanel = this.SwapChainBackgroundPanel;
+                _graphicsDevice.PresentationParameters.SwapChainPanel = this.SwapChainPanel;
             }
             else
             {
                 _graphicsDevice.PresentationParameters.DeviceWindowHandle = _game.Window.Handle;
-                _graphicsDevice.PresentationParameters.SwapChainBackgroundPanel = null;
+                _graphicsDevice.PresentationParameters.SwapChainPanel = null;
             }
 #endif
 			// Update the back buffer.
@@ -323,7 +326,7 @@ namespace Microsoft.Xna.Framework
             var presentationParameters = new PresentationParameters();
             presentationParameters.DepthStencilFormat = DepthFormat.Depth24;
 
-#if (WINDOWS || WINRT) && !DESKTOPGL
+#if (WINDOWS || WINDOWS_UAP || WINRT) && !DESKTOPGL
             _game.Window.SetSupportedOrientations(_supportedOrientations);
 
             presentationParameters.BackBufferFormat = _preferredBackBufferFormat;
@@ -332,9 +335,24 @@ namespace Microsoft.Xna.Framework
             presentationParameters.DepthStencilFormat = _preferredDepthStencilFormat;
             presentationParameters.IsFullScreen = false;
 
-#if WINDOWS_UAP
+#if WP8
+			// Nothing to do!
+#elif WINDOWS_UAP
 			presentationParameters.DeviceWindowHandle = IntPtr.Zero;
 			presentationParameters.SwapChainPanel = this.SwapChainPanel;
+#elif (W81 || WP81)
+			// The graphics device can use a XAML panel or a window
+			// to created the default swapchain target.
+            if (this.SwapChainPanel != null)
+            {
+                presentationParameters.DeviceWindowHandle = IntPtr.Zero;
+                presentationParameters.SwapChainPanel = this.SwapChainPanel;
+            }
+            else
+            {
+                presentationParameters.DeviceWindowHandle = _game.Window.Handle;
+                presentationParameters.SwapChainPanel = null;
+            }
 #else
             presentationParameters.DeviceWindowHandle = _game.Window.Handle;
 #endif
@@ -350,7 +368,7 @@ namespace Microsoft.Xna.Framework
             presentationParameters.IsFullScreen = true;
 #endif // MONOMAC
 
-#endif // WINDOWS || WINRT
+#endif // WINDOWS || WINDOWS_UAP || WINRT
 
             // TODO: Implement multisampling (aka anti-alising) for all platforms!
             var preparingDeviceSettingsHandler = PreparingDeviceSettings;
@@ -398,6 +416,10 @@ namespace Microsoft.Xna.Framework
 #if WINDOWS_UAP
         [CLSCompliant(false)]
         public SwapChainPanel SwapChainPanel { get; set; }
+#endif
+#if (W81 || WP81)
+        [CLSCompliant(false)]
+        public SwapChainBackgroundPanel SwapChainPanel { get; set; }
 #endif
 
         public GraphicsProfile GraphicsProfile { get; set; }

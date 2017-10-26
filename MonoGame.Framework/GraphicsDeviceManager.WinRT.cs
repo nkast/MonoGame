@@ -10,8 +10,13 @@ namespace Microsoft.Xna.Framework
 {
     partial class GraphicsDeviceManager
     {
+#if (W81 || WP81)
+        [CLSCompliant(false)]
+        public GenericSwapChainPanel SwapChainPanel { get; set; }
+#else
         [CLSCompliant(false)] 
         public SwapChainPanel SwapChainPanel { get; set; }
+#endif
 
         partial void PlatformPreparePresentationParameters(PresentationParameters presentationParameters)
         {

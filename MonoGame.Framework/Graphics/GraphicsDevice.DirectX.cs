@@ -13,11 +13,16 @@ using SharpDX.Direct3D11;
 using SharpDX.Mathematics.Interop;
 using SharpDX.DXGI;
 
-#if WINDOWS_UAP
+#if WINDOWS_UAP || (W81 || WP81)
 using Windows.UI.Xaml.Controls;
 using Windows.Graphics.Display;
 using Windows.UI.Core;
 using System.Runtime.InteropServices;
+#endif
+
+#if WP8
+using SharpDX.Direct3D11;
+using MonoGame.Framework.WindowsPhone;
 #endif
 
 
@@ -32,7 +37,7 @@ namespace Microsoft.Xna.Framework.Graphics
         internal SharpDX.Direct3D11.DepthStencilView _depthStencilView;
         private int _vertexBufferSlotsUsed;
 
-#if WINDOWS_UAP
+#if WINDOWS_UAP || (W81 || WP81)
 
         // Declare Direct2D Objects
         SharpDX.Direct2D1.Factory1 _d2dFactory;
@@ -49,8 +54,8 @@ namespace Microsoft.Xna.Framework.Graphics
 
 #if WINDOWS_UAP
 		SwapChainPanel _swapChainPanel;
-#else
-		SwapChainBackgroundPanel _swapChainBackgroundPanel;
+#elif (W81 || WP81)
+		GenericSwapChainPanel _swapChainPanel;
 #endif
 
 		float _dpi; 
@@ -71,7 +76,7 @@ namespace Microsoft.Xna.Framework.Graphics
         private DynamicIndexBuffer _userIndexBuffer16;
         private DynamicIndexBuffer _userIndexBuffer32;
 
-#if WINDOWS_UAP
+#if WINDOWS_UAP || (W81 || WP81)
 
         internal float Dpi
         {
@@ -108,10 +113,21 @@ namespace Microsoft.Xna.Framework.Graphics
             MaxTextureSlots = 16;
             MaxVertexTextureSlots = 16;
 
+#if WP8
+
+            UpdateDevice(DrawingSurfaceState.Device, DrawingSurfaceState.Context);
+            UpdateTarget(DrawingSurfaceState.RenderTargetView);
+#endif
 #if WINDOWS_UAP
 			CreateDeviceIndependentResources();
 			CreateDeviceResources();
 			Dpi = DisplayInformation.GetForCurrentView().LogicalDpi;
+#endif
+#if (W81 || WP81)
+
+            CreateDeviceIndependentResources();
+            CreateDeviceResources();
+            Dpi = DisplayProperties.LogicalDpi;
 #endif
 #if WINDOWS
             CreateDeviceResources();
@@ -122,13 +138,93 @@ namespace Microsoft.Xna.Framework.Graphics
 
         private void PlatformInitialize()
         {
+#if WP8
+            UpdateDevice(DrawingSurfaceState.Device, DrawingSurfaceState.Context);
+            UpdateTarget(DrawingSurfaceState.RenderTargetView);
+            return;
+#endif
 #if WINDOWS
             CorrectBackBufferSize();
 #endif
+#if !WP8
             CreateSizeDependentResources();
+#endif
         }
 
-#if WINDOWS_UAP
+#if WP8
+
+        private void UpdateDevice(SharpDX.Direct3D11.Device device, DeviceContext context)
+        {
+            // TODO: Lost device logic!
+
+            context.ClearState();
+
+            _d3dDevice = device;
+            _d3dContext = context;
+
+            SharpDX.Utilities.Dispose(ref _depthStencilView);
+
+            using (var dxgiDevice2 = device.QueryInterface<SharpDX.DXGI.Device2>())
+            {
+                // Ensure that DXGI does not queue more than one frame at a time. This both reduces 
+                // latency and ensures that the application will only render after each VSync, minimizing 
+                // power consumption.
+                dxgiDevice2.MaximumFrameLatency = 1;
+            }
+        }
+
+        internal void UpdateTarget(RenderTargetView renderTargetView)
+        {
+            _renderTargetView = renderTargetView;
+            _currentRenderTargets[0] = _renderTargetView;
+            _currentDepthStencilView = _depthStencilView;
+			
+            {
+                var currentWidth = PresentationParameters.BackBufferWidth;
+                var currentHeight = PresentationParameters.BackBufferHeight;
+
+                if (_depthStencilView == null || 
+                    currentWidth  != (int)WindowsPhoneGameWindow.Width ||
+                    currentHeight != (int)WindowsPhoneGameWindow.Height)
+                {
+                    PresentationParameters.BackBufferWidth = (int)WindowsPhoneGameWindow.Width;
+                    PresentationParameters.BackBufferHeight = (int)WindowsPhoneGameWindow.Height;
+
+					SharpDX.Utilities.Dispose(ref _depthStencilView);
+                    using (var depthTexture = new SharpDX.Direct3D11.Texture2D(
+                        _d3dDevice,
+                        new Texture2DDescription()
+                        {
+                            Width = PresentationParameters.BackBufferWidth,
+                            Height = PresentationParameters.BackBufferHeight,
+                            ArraySize = 1,
+                            BindFlags = BindFlags.DepthStencil,
+                            CpuAccessFlags = CpuAccessFlags.None,
+                            Format = SharpDX.DXGI.Format.D24_UNorm_S8_UInt,
+                            MipLevels = 1,
+                            OptionFlags = ResourceOptionFlags.None,
+                            SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0),
+                            Usage = ResourceUsage.Default
+                        }))
+                    _depthStencilView = new DepthStencilView(_d3dDevice, depthTexture);
+                    _currentDepthStencilView = _depthStencilView;
+
+                    Viewport = new Viewport(0, 0, PresentationParameters.BackBufferWidth, PresentationParameters.BackBufferHeight);
+                }
+            }
+        }
+
+        internal void OnPresentationChanged()
+        {
+            if (WindowsPhoneGameWindow.IsUsingDrawingSurfaceBackgroundGrid)
+            {                
+                PresentationParameters.BackBufferWidth = (int)WindowsPhoneGameWindow.Width;
+                PresentationParameters.BackBufferHeight = (int)WindowsPhoneGameWindow.Height;
+            }
+        }
+
+#endif
+#if WINDOWS_UAP || (W81 || WP81)
 
         /// <summary>
         /// Creates resources not tied the active graphics device.
@@ -306,7 +402,15 @@ namespace Microsoft.Xna.Framework.Graphics
                                             PresentationParameters.BackBufferHeight,
                                             format, 
                                             SwapChainFlags.None);
-           }
+#if (W81 || WP81)
+                // SwapChainBackgroundPanel behaves erratically when the SwapChain is resized outside of SizeChanged event.
+                // By re-assigning the SwapChain we force it to update the correct size/scale.
+                var asyncResult = PresentationParameters.SwapChainPanel.Dispatcher.RunIdleAsync( (e) =>
+                {
+                    PresentationParameters.SwapChainPanel.SetSwapChain(_swapChain);
+                });
+#endif
+            }
 
             // Otherwise, create a new swap chain.
             else
@@ -342,16 +446,29 @@ namespace Microsoft.Xna.Framework.Graphics
                         // Creates a SwapChain from a CoreWindow pointer.
                         var coreWindow = Marshal.GetObjectForIUnknown(PresentationParameters.DeviceWindowHandle) as CoreWindow;
                         using (var comWindow = new ComObject(coreWindow))
+#if WINDOWS_UAP || WP81 || WINRT
                            _swapChain = new SwapChain1(dxgiFactory2, dxgiDevice2, comWindow, ref desc);
+#else
+                           _swapChain = dxgiFactory2.CreateSwapChainForCoreWindow(_d3dDevice, comWindow, ref desc, null);
+#endif
                     }
                     else
                     {
 						_swapChainPanel = PresentationParameters.SwapChainPanel;
+#if WINDOWS_UAP
 						using (var nativePanel = ComObject.As<SharpDX.DXGI.ISwapChainPanelNative>(PresentationParameters.SwapChainPanel))
 						{
 							_swapChain = new SwapChain1(dxgiFactory2, dxgiDevice2, ref desc, null);
 							nativePanel.SwapChain = _swapChain;
 						}
+#else
+    #if WP81 || WINRT
+                        _swapChain = new SwapChain1(dxgiFactory2, dxgiDevice2, ref desc, null);
+    #else
+                        _swapChain = dxgiFactory2.CreateSwapChainForComposition(_d3dDevice, ref desc, null);
+    #endif
+                        PresentationParameters.SwapChainPanel.SetSwapChain(_swapChain);
+#endif
                     }
 
                     // Ensure that DXGI does not queue more than one frame at a time. This both reduces 
@@ -363,6 +480,7 @@ namespace Microsoft.Xna.Framework.Graphics
 
             _swapChain.Rotation = SharpDX.DXGI.DisplayModeRotation.Identity;
 
+#if WINDOWS_UAP
             // Counter act the composition scale of the render target as 
             // we already handle this in the platform window code. 
             if (PresentationParameters.SwapChainPanel != null)
@@ -376,6 +494,7 @@ namespace Microsoft.Xna.Framework.Graphics
                     swapChain2.MatrixTransform = inverseScale;
                 });
             }
+#endif
 
             // Obtain the backbuffer for this window which will be the final 3D rendertarget.
             Point targetSize;
@@ -460,13 +579,16 @@ namespace Microsoft.Xna.Framework.Graphics
 #if WINDOWS_UAP
             if (PresentationParameters.DeviceWindowHandle == IntPtr.Zero && PresentationParameters.SwapChainPanel == null)
                 throw new ArgumentException("PresentationParameters.DeviceWindowHandle or PresentationParameters.SwapChainPanel must not be null.");
+#elif (W81 || WP81)
+            if (PresentationParameters.DeviceWindowHandle == IntPtr.Zero && PresentationParameters.SwapChainPanel == null)
+                throw new ArgumentException("PresentationParameters.DeviceWindowHandle or PresentationParameters.SwapChainPanel must not be null.");
 #else
             if (PresentationParameters.DeviceWindowHandle == IntPtr.Zero)
                 throw new ArgumentException("PresentationParameters.DeviceWindowHandle must not be null.");
 #endif
         }
 
-#if  WINDOWS_UAP
+#if WINDOWS_UAP || (W81 || WP81) || WP8
 
         private void SetMultiSamplingToMaximum(PresentationParameters presentationParameters, out int quality)
         {
@@ -590,7 +712,7 @@ namespace Microsoft.Xna.Framework.Graphics
             var descr = new ModeDescription
             {
                 Format = format,
-#if WINRT
+#if WINDOWS_UAP || WINRT
                 Scaling = DisplayModeScaling.Stretched,
 #else
                 Scaling = DisplayModeScaling.Unspecified,
@@ -625,7 +747,7 @@ namespace Microsoft.Xna.Framework.Graphics
             var target = new ModeDescription
             {
                 Format = format,
-#if WINRT
+#if WINDOWS_UAP || WINRT
                 Scaling = DisplayModeScaling.Stretched,
 #else
                 Scaling = DisplayModeScaling.Unspecified,
@@ -733,7 +855,7 @@ namespace Microsoft.Xna.Framework.Graphics
                     ModeDescription =
                     {
                         Format = format,
-#if WINDOWS_UAP
+#if WINDOWS_UAP || WINRT
                         Scaling = DisplayModeScaling.Stretched,
 #else
                         Scaling = DisplayModeScaling.Unspecified,
@@ -928,9 +1050,11 @@ namespace Microsoft.Xna.Framework.Graphics
 
         private void PlatformDispose()
         {
+#if !WP8
             // make sure to release full screen or this might cause issues on exit
             if (_swapChain.IsFullScreen)
                 _swapChain.SetFullscreenState(false, null);
+#endif
 
             SharpDX.Utilities.Dispose(ref _renderTargetView);
             SharpDX.Utilities.Dispose(ref _depthStencilView);
@@ -943,9 +1067,11 @@ namespace Microsoft.Xna.Framework.Graphics
             foreach (var vb in _userVertexBuffers.Values)
                 vb.Dispose();
 
+#if !WP8
             SharpDX.Utilities.Dispose(ref _swapChain);
+#endif
 
-#if WINDOWS_UAP
+#if WINDOWS_UAP || (W81 || WP81)
 
             if (_bitmapTarget != null)
             {
@@ -979,7 +1105,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 _wicFactory = null;
             }
 
-#endif
+#endif // (W81 || WP81)
 
             SharpDX.Utilities.Dispose(ref _d3dContext);
             SharpDX.Utilities.Dispose(ref _d3dDevice);
@@ -987,7 +1113,7 @@ namespace Microsoft.Xna.Framework.Graphics
 
         private void PlatformPresent()
         {
-#if WINDOWS_UAP
+#if WINDOWS_UAP || (W81 || WP81)
             // The application may optionally specify "dirty" or "scroll" rects to improve efficiency
             // in certain scenarios.  In this sample, however, we do not utilize those features.
             var parameters = new SharpDX.DXGI.PresentParameters();
@@ -1136,7 +1262,7 @@ namespace Microsoft.Xna.Framework.Graphics
             return renderTarget;
         }
 
-#if WINDOWS_UAP
+#if WINDOWS_UAP || WINRT
         internal void ResetRenderTargets()
         {
             if (_d3dContext != null)
@@ -1483,8 +1609,12 @@ namespace Microsoft.Xna.Framework.Graphics
             // TODO share code with Texture2D.GetData and do pooling for staging textures
             // first set up a staging texture
             const SurfaceFormat format = SurfaceFormat.Color;
+#if WP8		
+                using (var backBufferTexture = new SharpDX.Direct3D11.Texture2D(_renderTargetView.Resource.NativePointer))		
+#else
             //You can't Map the BackBuffer surface, so we copy to another texture
             using (var backBufferTexture = SharpDX.Direct3D11.Resource.FromSwapChain<SharpDX.Direct3D11.Texture2D>(_swapChain, 0))
+#endif
             {
                 var desc = backBufferTexture.Description;
                 desc.SampleDescription = new SampleDescription(1, 0);
@@ -1587,7 +1717,7 @@ namespace Microsoft.Xna.Framework.Graphics
             _d3dContext.Flush();
         }
 
-#if WINDOWS_UAP
+#if WINDOWS_UAP || (W81 || WP81)
         internal void Trim()
         {
             using (var dxgiDevice3 = _d3dDevice.QueryInterface<SharpDX.DXGI.Device3>())

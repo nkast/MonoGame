@@ -19,7 +19,7 @@ namespace Microsoft.Xna.Framework.Media
         public Album Album
         {
             get { return PlatformGetAlbum(); }
-#if WINDOWS_UAP
+#if WINDOWS_UAP || (W81 || WP81)
             internal set { PlatformSetAlbum(value); }
 #endif
         }

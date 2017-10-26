@@ -14,8 +14,17 @@ namespace Microsoft.Xna.Framework.Audio
 {
     partial class SoundEffect
     {
+#if WINDOWS || WINDOWS_UAP || ((WINRT) && !WP8)
+
         // These platforms are only limited by memory.
         internal const int MAX_PLAYING_INSTANCES = int.MaxValue;
+
+#elif WP8
+
+        // Reference: http://msdn.microsoft.com/en-us/library/microsoft.xna.framework.audio.instanceplaylimitexception.aspx
+        internal const int MAX_PLAYING_INSTANCES = 64;
+
+#endif
 
         #region Static Fields & Properties
 
@@ -68,7 +77,11 @@ namespace Microsoft.Xna.Framework.Audio
                     var details = MasterVoice.VoiceDetails;
                     _reverbVoice = new SubmixVoice(Device, details.InputChannelCount, details.InputSampleRate);
 
-                    var reverb = new SharpDX.XAudio2.Fx.Reverb(Device);
+#if SHARPDX263
+                    var reverb = new SharpDX.XAudio2.Fx.Reverb();
+#else
+                    var reverb = new SharpDX.XAudio2.Fx.Reverb(Device);              
+#endif
                     var desc = new EffectDescriptor(reverb);
                     desc.InitialState = true;
                     desc.OutputChannelCount = details.InputChannelCount;
@@ -97,7 +110,7 @@ namespace Microsoft.Xna.Framework.Audio
             {
                 if (Device == null)
                 {
-#if !WINDOWS_UAP && DEBUG
+#if !(WINDOWS_UAP || WINRT) && DEBUG
                     try
                     {
                         //Fails if the XAudio2 SDK is not installed
@@ -113,7 +126,7 @@ namespace Microsoft.Xna.Framework.Audio
                 }
 
                 // Just use the default device.
-#if WINDOWS_UAP
+#if WINDOWS_UAP || WINRT
                 string deviceId = null;
 #else
                 const int deviceId = 0;
@@ -126,7 +139,7 @@ namespace Microsoft.Xna.Framework.Audio
                 }
 
                 // The autodetected value of MasterVoice.ChannelMask corresponds to the speaker layout.
-#if WINDOWS_UAP
+#if WINDOWS_UAP || WINRT
                 Speakers = (Speakers)MasterVoice.ChannelMask;
 #else
                 Speakers = Device.Version == XAudio2Version.Version27 ?

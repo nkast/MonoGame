@@ -14,6 +14,9 @@ using OpenGLES;
 #if DESKTOPGL || ANGLE || GLES
 using MonoGame.OpenGL;
 #endif
+#if WP8
+using System.Windows;
+#endif
 
 namespace Microsoft.Xna.Framework
 {
@@ -21,7 +24,9 @@ namespace Microsoft.Xna.Framework
     {
         public const int kMaxWaitForUIThread = 750; // In milliseconds
 
+#if !WP8
         static int mainThreadId;
+#endif
 
 #if ANDROID || WINDOWS || DESKTOPGL || ANGLE
         static List<Action> actions = new List<Action>();
@@ -30,10 +35,16 @@ namespace Microsoft.Xna.Framework
         public static EAGLContext BackgroundContext;
 #endif
 
+#if !WP8
         static Threading()
         {
+#if (W81 || WP81)
+            mainThreadId = Environment.CurrentManagedThreadId;
+#else
             mainThreadId = Thread.CurrentThread.ManagedThreadId;
+#endif
         }
+#endif
 #if ANDROID
         internal static void ResetThread (int id)
         {
@@ -46,7 +57,13 @@ namespace Microsoft.Xna.Framework
         /// <returns>true if the code is currently running on the UI thread.</returns>
         public static bool IsOnUIThread()
         {
+#if WP8
+            return Deployment.Current.Dispatcher.CheckAccess();
+#elif (W81 || WP81)
+            return (mainThreadId == Environment.CurrentManagedThreadId);
+#else
             return mainThreadId == Thread.CurrentThread.ManagedThreadId;
+#endif
         }
 
         /// <summary>
@@ -59,6 +76,36 @@ namespace Microsoft.Xna.Framework
                 throw new InvalidOperationException("Operation not called on UI thread.");
         }
 
+#if WP8
+        internal static void RunOnUIThread(Action action)
+        {
+            RunOnContainerThread(Deployment.Current.Dispatcher, action);
+        }
+        
+        internal static void RunOnContainerThread(System.Windows.Threading.Dispatcher target, Action action)
+        {
+            target.BeginInvoke(action);
+        }
+
+        internal static void BlockOnContainerThread(System.Windows.Threading.Dispatcher target, Action action)
+        {
+            if (target.CheckAccess())
+            {
+                action();
+            }
+            else
+            {
+                EventWaitHandle wait = new AutoResetEvent(false);
+                target.BeginInvoke(() =>
+                {
+                    action();
+                    wait.Set();
+                });
+                wait.WaitOne(kMaxWaitForUIThread);
+            }
+        }
+#endif
+
         /// <summary>
         /// Runs the given action on the UI thread and blocks the current thread while the action is running.
         /// If the current thread is the UI thread, the action will run immediately.
@@ -69,13 +116,25 @@ namespace Microsoft.Xna.Framework
             if (action == null)
                 throw new ArgumentNullException("action");
 
-#if DIRECTX || PSM
+#if (DIRECTX && !WP8) || PSM
             action();
 #else
             // If we are already on the UI thread, just call the action and be done with it
             if (IsOnUIThread())
             {
+#if WP8
+                try
+                {
+                    action();
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Need to be on a different thread
+                    BlockOnContainerThread(Deployment.Current.Dispatcher, action);
+                }
+#else
                 action();
+#endif
                 return;
             }
 
@@ -91,6 +150,8 @@ namespace Microsoft.Xna.Framework
                 GL.Flush();
                 GraphicsExtensions.CheckGLError();
             }
+#elif WP8
+            BlockOnContainerThread(Deployment.Current.Dispatcher, action);
 #else
             ManualResetEventSlim resetEvent = new ManualResetEventSlim(false);
             Add(() =>

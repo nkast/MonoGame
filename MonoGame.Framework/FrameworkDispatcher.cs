@@ -33,7 +33,9 @@ namespace Microsoft.Xna.Framework
         {
             DynamicSoundEffectInstanceManager.UpdatePlayingInstances();
             SoundEffectInstancePool.Update();
+#if !WP8
             Microphone.UpdateMicrophones();
+#endif
         }
 
         private static void Initialize()
