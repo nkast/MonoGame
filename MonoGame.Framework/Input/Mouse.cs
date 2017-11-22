@@ -42,6 +42,10 @@ namespace Microsoft.Xna.Framework.Input
         /// <returns>Current state of the mouse.</returns>
         public static MouseState GetState()
         {
+#if (WINDOWS && DIRECTX && !OPENGL) // WinForms based Windows Desktop
+            return PlatformGetState();
+#endif
+
             if (PrimaryWindow != null)
                 return GetState(PrimaryWindow);
 
