@@ -248,6 +248,10 @@ namespace Microsoft.Xna.Framework
 	    {
             EventHelpers.Raise(this, KeyUp, e);
 	    }
+
+        // TNC: helper for avoiding garbage
+        internal bool IsTextInputAttached() { return (TextInput != null); }
+        internal bool IsKeyUpDownAttached() { return (KeyDown != null || KeyUp != null);}
 #endif
 #if WINDOWS
         // TNC: helper for filtering keyboard messages
