@@ -32,7 +32,7 @@ namespace Microsoft.Xna.Framework.Graphics
 		/// <summary>
 		/// All the glyphs in this SpriteFont.
 		/// </summary>
-		public Glyph[] Glyphs { get { return _glyphs; } }
+		internal Glyph[] Glyphs { get { return _glyphs; } }
 
 		class CharComparer: IEqualityComparer<char>
 		{
