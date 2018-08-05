@@ -580,7 +580,7 @@ namespace Microsoft.Xna.Framework.Graphics
             var offset = Vector2.Zero;
             var firstGlyphOfLine = true;
 
-            fixed (SpriteFont.Glyph* pGlyphs = spriteFont.Glyphs)
+            fixed (SpriteFont.Glyph* pGlyphs = spriteFont.InternalGlyphs)
             for (var i = 0; i < text.Length; ++i)
             {
                 var c = text[i];
@@ -739,7 +739,7 @@ namespace Microsoft.Xna.Framework.Graphics
             var offset = Vector2.Zero;
             var firstGlyphOfLine = true;
 
-            fixed (SpriteFont.Glyph* pGlyphs = spriteFont.Glyphs)
+            fixed (SpriteFont.Glyph* pGlyphs = spriteFont.InternalGlyphs)
             for (var i = 0; i < text.Length; ++i)
             {
                 var c = text[i];
@@ -853,7 +853,7 @@ namespace Microsoft.Xna.Framework.Graphics
             var offset = Vector2.Zero;
             var firstGlyphOfLine = true;
 
-            fixed (SpriteFont.Glyph* pGlyphs = spriteFont.Glyphs)
+            fixed (SpriteFont.Glyph* pGlyphs = spriteFont.InternalGlyphs)
             for (var i = 0; i < text.Length; ++i)
             {
                 var c = text[i];
@@ -1012,7 +1012,7 @@ namespace Microsoft.Xna.Framework.Graphics
             var offset = Vector2.Zero;
             var firstGlyphOfLine = true;
 
-            fixed (SpriteFont.Glyph* pGlyphs = spriteFont.Glyphs)
+            fixed (SpriteFont.Glyph* pGlyphs = spriteFont.InternalGlyphs)
             for (var i = 0; i < text.Length; ++i)
             {
                 var c = text[i];
