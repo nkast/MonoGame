@@ -61,7 +61,7 @@ namespace Microsoft.Xna.Framework.Graphics
 #endif
 
         // The active render targets.
-        readonly SharpDX.Direct3D11.RenderTargetView[] _currentRenderTargets = new SharpDX.Direct3D11.RenderTargetView[4];
+        readonly SharpDX.Direct3D11.RenderTargetView[] _currentRenderTargets = new SharpDX.Direct3D11.RenderTargetView[8];
 
         // The active depth view.
         SharpDX.Direct3D11.DepthStencilView _currentDepthStencilView;
@@ -117,6 +117,7 @@ namespace Microsoft.Xna.Framework.Graphics
 #endif
 
             _maxVertexBufferSlots = 16;
+            if (this.GraphicsProfile >= GraphicsProfile.FL10_1) _maxVertexBufferSlots = 32;
         }
 
         private void PlatformInitialize()
@@ -201,6 +202,10 @@ namespace Microsoft.Xna.Framework.Graphics
 #if DEBUG
             featureLevelsList.Clear();
             // create device specific to profile
+            if (GraphicsProfile == GraphicsProfile.FL11_1) featureLevelsList.Add(FeatureLevel.Level_11_1);
+            if (GraphicsProfile == GraphicsProfile.FL11_0) featureLevelsList.Add(FeatureLevel.Level_11_0);
+            if (GraphicsProfile == GraphicsProfile.FL10_1) featureLevelsList.Add(FeatureLevel.Level_10_1);
+            if (GraphicsProfile == GraphicsProfile.FL10_0) featureLevelsList.Add(FeatureLevel.Level_10_0);
             if (GraphicsProfile == GraphicsProfile.HiDef) featureLevelsList.Add(FeatureLevel.Level_9_3);
             if (GraphicsProfile == GraphicsProfile.Reach) featureLevelsList.Add(FeatureLevel.Level_9_1);
 #endif            
@@ -582,6 +587,10 @@ namespace Microsoft.Xna.Framework.Graphics
 #if DEBUG
             featureLevelsList.Clear();
             // create device specific to profile
+            if (GraphicsProfile == GraphicsProfile.FL11_1) featureLevelsList.Add(FeatureLevel.Level_11_1);
+            if (GraphicsProfile == GraphicsProfile.FL11_0) featureLevelsList.Add(FeatureLevel.Level_11_0);
+            if (GraphicsProfile == GraphicsProfile.FL10_1) featureLevelsList.Add(FeatureLevel.Level_10_1);
+            if (GraphicsProfile == GraphicsProfile.FL10_0) featureLevelsList.Add(FeatureLevel.Level_10_0);
             if (GraphicsProfile == GraphicsProfile.HiDef) featureLevelsList.Add(FeatureLevel.Level_9_3);
             if (GraphicsProfile == GraphicsProfile.Reach) featureLevelsList.Add(FeatureLevel.Level_9_1);
 #endif            
