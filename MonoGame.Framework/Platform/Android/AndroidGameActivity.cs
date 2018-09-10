@@ -16,7 +16,7 @@ namespace Microsoft.Xna.Framework
         internal Game Game { private get; set; }
 
         private ScreenReceiver screenReceiver;
-        private OrientationListener _orientationListener;
+        internal OrientationListener _orientationListener;
 
         public bool AutoPauseAndResumeMediaPlayer = true;
         public bool RenderOnUIThread = true; 
@@ -30,6 +30,10 @@ namespace Microsoft.Xna.Framework
 		/// </param>
 		protected override void OnCreate (Bundle savedInstanceState)
 		{
+            // Force detection of NaturalOrientation. This must happend before initializing game.
+            Game.Activity = this;
+            var initNaturalOrientation = AndroidCompatibility.NaturalOrientation.Value;
+            
             RequestWindowFeature(WindowFeatures.NoTitle);
             base.OnCreate(savedInstanceState);
 
