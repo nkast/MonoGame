@@ -21,6 +21,8 @@ namespace Microsoft.Xna.Framework
         private static readonly string[] Kindles = new[] { "KFTT", "KFJWI", "KFJWA", "KFSOWI", "KFTHWA", "KFTHWI", "KFAPWA", "KFAPWI" };
 
         public static bool FlipLandscape { get; private set; }
+
+        [CLSCompliant(false)]
         public static Lazy<Orientation> NaturalOrientation { get; private set; }
 
         static AndroidCompatibility()
@@ -33,6 +35,11 @@ namespace Microsoft.Xna.Framework
         {
             var orientation = Game.Activity.Resources.Configuration.Orientation;
             SurfaceOrientation rotation = Game.Activity.WindowManager.DefaultDisplay.Rotation;
+
+            // check if MainActivity setup is correct. 
+            var screenOrientation = Game.Activity.RequestedOrientation;
+            if (screenOrientation != Android.Content.PM.ScreenOrientation.FullSensor)
+                throw new InvalidOperationException("NaturalOrientation detection failed. Set ScreenOrientation in MainActivity to FullSensor.");
 
             if (((rotation == SurfaceOrientation.Rotation0 || rotation == SurfaceOrientation.Rotation180) &&
                 orientation == Orientation.Landscape)
@@ -54,8 +61,8 @@ namespace Microsoft.Xna.Framework
             if (NaturalOrientation.Value == Orientation.Landscape)
                 orientation += 270;
 
-            // Round orientation into one of 4 positions, either 0, 90, 180, 270. 
-            int ort = ((orientation + 45) / 90 * 90) % 360;
+            // Round orientation into one of 8 positions, either 0, 45, 90, 135, 180, 225, 270, 315. 
+            int ort = ( ((orientation + 22) / 45) * 45) % 360;
 
             // Surprisingly 90 degree is landscape right, except on Kindle devices
             var disporientation = DisplayOrientation.Unknown;
@@ -70,7 +77,7 @@ namespace Microsoft.Xna.Framework
                 case 180: disporientation = DisplayOrientation.PortraitDown;
                     break;
                 default:
-                    disporientation = DisplayOrientation.LandscapeLeft;
+                    disporientation = DisplayOrientation.Unknown;
                     break;
             }
 

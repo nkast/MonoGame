@@ -657,6 +657,9 @@ namespace Microsoft.Xna.Framework
                 updateEventArgs.Time = t < 0 ? 0 : t;
             }
 
+            try { Game.Activity._orientationListener.Update(updateEventArgs); }
+            catch(Exception) { }
+            
             try
             {
                 UpdateFrameInternal(updateEventArgs);
