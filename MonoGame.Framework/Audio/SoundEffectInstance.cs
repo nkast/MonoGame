@@ -2,7 +2,10 @@
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE.txt', which is part of this source code package.
 
+// Copyright (C)2021 Nick Kastellanos
+
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.Xna.Framework.Audio
 {
@@ -12,8 +15,13 @@ namespace Microsoft.Xna.Framework.Audio
     /// </remarks>
     public partial class SoundEffectInstance : IDisposable
     {
+        internal AudioService _audioService { get; private set; }
+        internal LinkedListNode<SoundEffectInstance> PlayingInstancesNode { get; private set; }
+        internal LinkedListNode<SoundEffectInstance> PooledInstancesNode { get; private set; }
+
+        private SoundState _state = SoundState.Stopped;
+        private bool _isLooped = false;
         private bool _isDisposed = false;
-        internal bool _isPooled = true;
         internal bool _isXAct;
         internal bool _isDynamic;
         internal SoundEffect _effect;
@@ -25,12 +33,24 @@ namespace Microsoft.Xna.Framework.Audio
         /// <remarks>This value has no effect on an already playing sound.</remarks>
         public virtual bool IsLooped
         { 
-            get { return PlatformGetIsLooped(); }
-            set { PlatformSetIsLooped(value); }
+            get { return _isLooped; }
+            set
+            {
+                if (value == _isLooped) return;
+
+                //   XNA will throw an InvalidOperationException if you change 'IsLooped'
+                // after the first call to 'Play()'
+                //   If the audio platform can't release or resume loop while a sound is playing
+                // it's preferred to throw an exception in 'PlatformSetIsLooped()'
+
+                PlatformSetIsLooped(value);
+                _isLooped = value;
+            }
         }
 
         /// <summary>Gets or sets the pan, or speaker balance..</summary>
         /// <value>Pan value ranging from -1.0 (left speaker) to 0.0 (centered), 1.0 (right speaker). Values outside of this range will throw an exception.</value>
+        /// <remarks>In OpenAL Panning/3D works only with mono sounds.</remarks>
         public float Pan
         {
             get { return _pan; } 
@@ -85,22 +105,50 @@ namespace Microsoft.Xna.Framework.Audio
         }
 
         /// <summary>Gets the SoundEffectInstance's current playback state.</summary>
-        public virtual SoundState State { get { return PlatformGetState(); } }
+        public virtual SoundState State
+        {
+            get
+            {
+                lock (AudioService.SyncHandle)
+                {
+                    PlatformUpdateState();
+                    return _state;
+                }
+            }
+        }
 
         /// <summary>Indicates whether the object is disposed.</summary>
         public bool IsDisposed { get { return _isDisposed; } }
 
-        internal SoundEffectInstance()
+        internal SoundEffectInstance(AudioService audioService)
         {
+            if (audioService == null)
+                throw new ArgumentNullException("audioService");
+
+            _audioService = audioService;
+            _effect = null;
+            _isXAct = false;
+            PlayingInstancesNode = new LinkedListNode<SoundEffectInstance>(this);
+            PooledInstancesNode = null;
+
             _pan = 0.0f;
             _volume = 1.0f;
-            _pitch = 0.0f;            
+            _pitch = 0.0f;
         }
 
-        internal SoundEffectInstance(byte[] buffer, int sampleRate, int channels)
-            : this()
+        internal SoundEffectInstance(AudioService audioService, SoundEffect effect, bool isPooled = false, bool isXAct = false)
         {
-            PlatformInitialize(buffer, sampleRate, channels);
+            _audioService = audioService;
+            _effect = effect;
+            _isXAct = isXAct;
+            PlayingInstancesNode = new LinkedListNode<SoundEffectInstance>(this);
+            PooledInstancesNode = (isPooled) ? new LinkedListNode<SoundEffectInstance>(this) : null;
+
+            _pan = 0.0f;
+            _volume = 1.0f;
+            _pitch = 0.0f;
+
+            PlatformConstruct();
         }
 
         /// <summary>
@@ -123,63 +171,127 @@ namespace Microsoft.Xna.Framework.Audio
         /// <summary>Applies 3D positioning to the SoundEffectInstance using multiple listeners.</summary>
         /// <param name="listeners">Data about each listener.</param>
         /// <param name="emitter">Data about the source of emission.</param>
+        /// <remarks>In OpenAL Panning/3D works only with mono sounds.</remarks>
         public void Apply3D(AudioListener[] listeners, AudioEmitter emitter)
         {
             foreach (var l in listeners)
-				PlatformApply3D(l, emitter);
+                PlatformApply3D(l, emitter);
         }
 
         /// <summary>Pauses playback of a SoundEffectInstance.</summary>
         /// <remarks>Paused instances can be resumed with SoundEffectInstance.Play() or SoundEffectInstance.Resume().</remarks>
         public virtual void Pause()
         {
-            PlatformPause();
+            lock (AudioService.SyncHandle)
+            {
+                AssertNotDisposed();
+
+                var state = State;
+                switch (state)
+                {
+                    case SoundState.Paused:
+                        return;
+                    case SoundState.Stopped:
+                        return;
+                    case SoundState.Playing:
+                        {
+                            PlatformPause();
+                            _state = SoundState.Paused;
+
+                            AudioService.Current.RemovePlayingInstance(this);
+                        }
+                        return;
+                }
+            }
         }
 
         /// <summary>Plays or resumes a SoundEffectInstance.</summary>
         /// <remarks>Throws an exception if more sounds are playing than the platform allows.</remarks>
         public virtual void Play()
         {
-            if (_isDisposed)
-                throw new ObjectDisposedException("SoundEffectInstance");
-
-            if (State == SoundState.Playing)
-                return;
-
-            if (State == SoundState.Paused)
+            lock (AudioService.SyncHandle)
             {
-                Resume();
-                return;
-            }
+                AssertNotDisposed();
 
-            // We don't need to check if we're at the instance play limit
-            // if we're resuming from a paused state.
-            if (State != SoundState.Paused)
-            {
-                if (!SoundEffectInstancePool.SoundsAvailable)
-                    throw new InstancePlayLimitException();
-            }
-            
-            // For non-XAct sounds we need to be sure the latest
-            // master volume level is applied before playback.
-            if (!_isXAct)
-                PlatformSetVolume(_volume * SoundEffect.MasterVolume);
+                var state = State;
+                switch (state)
+                {
+                    case SoundState.Playing:
+                        return;
+                    case SoundState.Paused:
+                        Resume();
+                        return;
+                    case SoundState.Stopped:
+                        {
+                            // For non-XAct sounds we need to be sure the latest
+                            // master volume level is applied before playback.
+                            if (!_isXAct)
+                                PlatformSetVolume(_volume * SoundEffect.MasterVolume);
 
-            PlatformPlay();
-            SoundEffectInstancePool.Remove(this);
+                            PlatformPlay();
+                            _state = SoundState.Playing;
+
+                            _audioService.AddPlayingInstance(this);
+                        }
+                        return;
+                }
+            }
         }
 
         /// <summary>Resumes playback for a SoundEffectInstance.</summary>
-        /// <remarks>Only has effect on a SoundEffectInstance in a paused state.</remarks>
+        // <remarks>Only has effect on a SoundEffectInstance in a paused state.</remarks>
+        // In XNA 'Resume()' behaves exactly like 'Play()'.
         public virtual void Resume()
         {
-            PlatformResume();
+            lock (AudioService.SyncHandle)
+            {
+                AssertNotDisposed();
+
+                var state = State;
+                switch (state)
+                {
+                    case SoundState.Playing:
+                        return;
+                    case SoundState.Stopped:
+                        // In XNA, 'Resume()' behaves like 'Play()' when
+                        // the sound is stopped.
+                        Play();
+                        return;
+                    case SoundState.Paused:
+                        {
+                            PlatformResume();
+                            _state = SoundState.Playing;
+
+                            _audioService.AddPlayingInstance(this);
+                        }
+                        return;
+                }
+            }
         }
 
         /// <summary>Immediately stops playing a SoundEffectInstance.</summary>
         public virtual void Stop()
         {
-            PlatformStop(true);
+            lock (AudioService.SyncHandle)
+            {
+                AssertNotDisposed();
+
+                var state = State;
+                switch (state)
+                {
+                    case SoundState.Stopped:
+                        return;
+                    case SoundState.Paused:
+                    case SoundState.Playing:
+                        {
+                            PlatformStop();
+                            _state = SoundState.Stopped;
+
+                            AudioService.Current.RemovePlayingInstance(this);
+                        }
+                        return;
+                }
+            }
         }
 
         /// <summary>Stops playing a SoundEffectInstance, either immediately or as authored.</summary>
@@ -187,7 +299,27 @@ namespace Microsoft.Xna.Framework.Audio
         /// <remarks>Stopping a sound with the immediate argument set to false will allow it to play any release phases, such as fade, before coming to a stop.</remarks>
         public virtual void Stop(bool immediate)
         {
-            PlatformStop(immediate);
+            if (immediate)
+            {
+                Stop();
+                return;
+            }
+            
+            lock (AudioService.SyncHandle)
+            {
+                AssertNotDisposed();
+
+                var state = State;
+                switch (state)
+                {
+                    case SoundState.Stopped:
+                        return;
+                    case SoundState.Paused:
+                    case SoundState.Playing:
+                        PlatformRelease();
+                        return;
+                }
+            }
         }
 
         /// <summary>Releases the resources held by this <see cref="Microsoft.Xna.Framework.Audio.SoundEffectInstance"/>.</summary>
@@ -208,11 +340,48 @@ namespace Microsoft.Xna.Framework.Audio
         /// not at that time.  Unmanaged resources should always be released.</remarks>
         protected virtual void Dispose(bool disposing)
         {
-            if (!_isDisposed)
+            if (disposing)
             {
-                PlatformDispose(disposing);
-                _isDisposed = true;
+                lock (AudioService.SyncHandle)
+                {
+                    if (_isDisposed)
+                        return;
+
+                    Stop();
+                    PlatformDispose(disposing);
+
+                    _audioService = null;
+                    _effect = null;
+                    PlayingInstancesNode = null;
+                    PooledInstancesNode = null;
+
+                    _isDisposed = true;
+                }
             }
+            else
+            {
+                lock (AudioService.SyncHandle)
+                {
+                    if (_isDisposed)
+                        return;
+
+                    Stop();
+                    PlatformDispose(disposing);
+
+                    _audioService = null;
+                    _effect = null;
+                    PlayingInstancesNode = null;
+                    PooledInstancesNode = null;
+
+                    _isDisposed = true;
+                }
+            }
+        }
+
+        private void AssertNotDisposed()
+        {
+            if (IsDisposed)
+                throw new ObjectDisposedException("SoundEffectInstance");
         }
     }
 }

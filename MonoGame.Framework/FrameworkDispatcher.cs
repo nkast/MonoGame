@@ -26,10 +26,6 @@ namespace Microsoft.Xna.Framework
             var updateHandler = OnUpdate;
             if (updateHandler != null)
                 updateHandler();
-
-            DynamicSoundEffectInstanceManager.UpdatePlayingInstances();
-            SoundEffectInstancePool.Update();
-            Microphone.UpdateMicrophones();
         }
     }
 }

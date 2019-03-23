@@ -2,13 +2,15 @@
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE.txt', which is part of this source code package.
 
+// Copyright (C)2021 Nick Kastellanos
+
 using System;
 
 namespace Microsoft.Xna.Framework.Audio
 {
     public sealed partial class DynamicSoundEffectInstance : SoundEffectInstance
     {
-        private void PlatformCreate()
+        private void PlatformConstructDynamic()
         {
         }
 
@@ -21,11 +23,11 @@ namespace Microsoft.Xna.Framework.Audio
         {
         }
 
-        private void PlatformPause()
+        private void PlatformResume()
         {
         }
 
-        private void PlatformResume()
+        private void PlatformPause()
         {
         }
 
@@ -44,5 +46,6 @@ namespace Microsoft.Xna.Framework.Audio
         private void PlatformUpdateQueue()
         {
         }
+
     }
 }

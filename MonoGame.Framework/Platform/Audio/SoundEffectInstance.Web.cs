@@ -2,18 +2,29 @@
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE.txt', which is part of this source code package.
 
+// Copyright (C)2021 Nick Kastellanos
+
 using System;
-using System.IO;
 
 namespace Microsoft.Xna.Framework.Audio
 {
-    public partial class SoundEffectInstance : IDisposable
+    public partial class SoundEffectInstance
     {
-        internal void PlatformInitialize(byte[] buffer, int sampleRate, int channels)
+
+        internal void PlatformConstruct()
+        {
+        }
+
+        internal void PlatformReuseInstance(SoundEffect newEffect)
         {
         }
 
         private void PlatformApply3D(AudioListener listener, AudioEmitter emitter)
+        {
+        }
+
+
+        internal void PlatformInitialize(byte[] buffer, int sampleRate, int channels)
         {
         }
 
@@ -29,17 +40,20 @@ namespace Microsoft.Xna.Framework.Audio
         {
         }
 
-        private void PlatformStop(bool immediate)
+        private void PlatformStop()
         {
         }
 
-        private void PlatformSetIsLooped(bool value)
+        private void PlatformRelease()
         {
         }
 
-        private bool PlatformGetIsLooped()
+        internal void PlatformUpdateState()
         {
-            return false;
+        }
+
+        private void PlatformSetIsLooped(bool isLooped)
+        {
         }
 
         private void PlatformSetPan(float value)
@@ -48,11 +62,6 @@ namespace Microsoft.Xna.Framework.Audio
 
         private void PlatformSetPitch(float value)
         {
-        }
-
-        private SoundState PlatformGetState()
-        {
-            return SoundState.Stopped;
         }
 
         private void PlatformSetVolume(float value)

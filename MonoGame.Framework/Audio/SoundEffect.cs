@@ -1,6 +1,8 @@
 // MonoGame - Copyright (C) The MonoGame Team
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE.txt', which is part of this source code package.
+
+// Copyright (C)2021 Nick Kastellanos
 ﻿
 using System;
 using System.IO;
@@ -29,10 +31,6 @@ namespace Microsoft.Xna.Framework.Audio
         // Only used from SoundEffect.FromStream.
         private SoundEffect(Stream stream)
         {
-            Initialize();
-            if (_systemState != SoundSystemState.Initialized)
-                throw new NoAudioHardwareException("Audio has failed to initialize. Call SoundEffect.Initialize() before sound operation to get more specific errors.");
-
             /*
               The Stream object must point to the head of a valid PCM wave file. Also, this wave file must be in the RIFF bitstream format.
               The audio format has the following restrictions:
@@ -48,10 +46,6 @@ namespace Microsoft.Xna.Framework.Audio
         // Only used from SoundEffectReader.
         internal SoundEffect(byte[] header, byte[] buffer, int bufferSize, int durationMs, int loopStart, int loopLength)
         {
-            Initialize();
-            if (_systemState != SoundSystemState.Initialized)
-                throw new NoAudioHardwareException("Audio has failed to initialize. Call SoundEffect.Initialize() before sound operation to get more specific errors.");
-
             _duration = TimeSpan.FromMilliseconds(durationMs);
 
             // Peek at the format... handle regular PCM data.
@@ -72,10 +66,6 @@ namespace Microsoft.Xna.Framework.Audio
         // Only used from XACT WaveBank.
         internal SoundEffect(MiniFormatTag codec, byte[] buffer, int channels, int sampleRate, int blockAlignment, int loopStart, int loopLength)
         {
-            Initialize();
-            if (_systemState != SoundSystemState.Initialized)
-                throw new NoAudioHardwareException("Audio has failed to initialize. Call SoundEffect.Initialize() before sound operation to get more specific errors.");
-
             // Handle the common case... the rest is platform specific.
             if (codec == MiniFormatTag.Pcm)
             {
@@ -85,41 +75,6 @@ namespace Microsoft.Xna.Framework.Audio
             }
 
             PlatformInitializeXact(codec, buffer, channels, sampleRate, blockAlignment, loopStart, loopLength, out _duration);
-        }
-
-        #endregion
-
-        #region Audio System Initialization
-
-        internal enum SoundSystemState
-        {
-            NotInitialized,
-            Initialized,
-            FailedToInitialized
-        }
-
-        internal static SoundSystemState _systemState = SoundSystemState.NotInitialized;
-
-        /// <summary>
-        /// Initializes the sound system for SoundEffect support.
-        /// This method is automatically called when a SoundEffect is loaded, a DynamicSoundEffectInstance is created, or Microphone.All is queried.
-        /// You can however call this method manually (preferably in, or before the Game constructor) to catch any Exception that may occur during the sound system initialization (and act accordingly).
-        /// </summary>
-        public static void Initialize()
-        {
-            if (_systemState != SoundSystemState.NotInitialized)
-                return;
-
-            try
-            {
-                PlatformInitialize();
-                _systemState = SoundSystemState.Initialized;
-            }
-            catch (Exception)
-            {
-                _systemState = SoundSystemState.FailedToInitialized;
-                throw;
-            }
         }
 
         #endregion
@@ -151,10 +106,6 @@ namespace Microsoft.Xna.Framework.Audio
         /// <remarks>This only supports uncompressed 16bit PCM wav data.</remarks>
         public SoundEffect(byte[] buffer, int offset, int count, int sampleRate, AudioChannels channels, int loopStart, int loopLength)
         {
-            Initialize();
-            if (_systemState != SoundSystemState.Initialized)
-                throw new NoAudioHardwareException("Audio has failed to initialize. Call SoundEffect.Initialize() before sound operation to get more specific errors.");
-
             if (sampleRate < 8000 || sampleRate > 48000)
                 throw new ArgumentOutOfRangeException("sampleRate");
             if ((int)channels != 1 && (int)channels != 2)
@@ -218,13 +169,7 @@ namespace Microsoft.Xna.Framework.Audio
         /// <remarks>Creating a SoundEffectInstance before calling SoundEffectInstance.Play() allows you to access advanced playback features, such as volume, pitch, and 3D positioning.</remarks>
         public SoundEffectInstance CreateInstance()
         {
-            var inst = new SoundEffectInstance();
-            PlatformSetupInstance(inst);
-
-            inst._isPooled = false;
-            inst._effect = this;
-
-            return inst;
+            return new SoundEffectInstance(AudioService.Current, this);
         }
 
         /// <summary>
@@ -322,13 +267,7 @@ namespace Microsoft.Xna.Framework.Audio
         /// </remarks>
         public bool Play()
         {
-            var inst = GetPooledInstance(false);
-            if (inst == null)
-                return false;
-
-            inst.Play();
-
-            return true;
+            return AudioService.Current.Play(this);
         }
 
         /// <summary>Gets an internal SoundEffectInstance and plays it with the specified volume, pitch, and panning.</summary>
@@ -343,33 +282,9 @@ namespace Microsoft.Xna.Framework.Audio
         /// </remarks>
         public bool Play(float volume, float pitch, float pan)
         {
-            var inst = GetPooledInstance(false);
-            if (inst == null)
-                return false;
-
-            inst.Volume = volume;
-            inst.Pitch = pitch;
-            inst.Pan = pan;
-
-            inst.Play();
-
-            return true;
+            return AudioService.Current.Play(this, volume, pitch,  pan);
         }
 
-        /// <summary>
-        /// Returns a sound effect instance from the pool or null if none are available.
-        /// </summary>
-        internal SoundEffectInstance GetPooledInstance(bool forXAct)
-        {
-            if (!SoundEffectInstancePool.SoundsAvailable)
-                return null;
-
-            var inst = SoundEffectInstancePool.GetInstance(forXAct);
-            inst._effect = this;
-            PlatformSetupInstance(inst);
-
-            return inst;
-        }
 
         #endregion
 
@@ -409,7 +324,7 @@ namespace Microsoft.Xna.Framework.Audio
                     return;
                 
                 _masterVolume = value;
-                SoundEffectInstancePool.UpdateMasterVolume();
+                AudioService.UpdateMasterVolume();
             }
         }
 
@@ -500,11 +415,33 @@ namespace Microsoft.Xna.Framework.Audio
         /// not at that time.  Unmanaged resources should always be released.</remarks>
         void Dispose(bool disposing)
         {
-            if (!_isDisposed)
+            if (disposing)
             {
-                SoundEffectInstancePool.StopPooledInstances(this);
-                PlatformDispose(disposing);
-                _isDisposed = true;
+                lock (AudioService.SyncHandle)
+                {
+                    if (IsDisposed) return;
+
+                    // Clean up managed objects
+
+                    // Clean up unmanaged resources
+                    AudioService.OnEffectDisposed(this, disposing);
+                    PlatformDispose(disposing);
+
+                    _isDisposed = true;
+                }
+            }
+            else
+            {
+                lock (AudioService.SyncHandle)
+                {
+                    if (IsDisposed) return;
+
+                    // Clean up unmanaged resources
+                    AudioService.OnEffectDisposed(this, disposing);
+                    PlatformDispose(disposing);
+
+                    _isDisposed = true;
+                }
             }
         }
 

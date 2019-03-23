@@ -2,6 +2,8 @@
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE.txt', which is part of this source code package.
 
+// Copyright (C)2021 Nick Kastellanos
+
 using System;
 using System.Collections.Generic;
 using MonoGame.OpenAL;
@@ -13,13 +15,11 @@ namespace Microsoft.Xna.Framework.Audio
         private Queue<OALSoundBuffer> _queuedBuffers;
         private ALFormat _format;
 
-        private void PlatformCreate()
+        private void PlatformConstructDynamic()
         {
             _format = _channels == AudioChannels.Mono ? ALFormat.Mono16 : ALFormat.Stereo16;
-            InitializeSound();
 
-            SourceId = controller.ReserveSource();
-            HasSourceId = true;
+            _sourceId = _audioService.ReserveSource();
 
             _queuedBuffers = new Queue<OALSoundBuffer>();
         }
@@ -34,35 +34,35 @@ namespace Microsoft.Xna.Framework.Audio
             AL.GetError();
 
             // Ensure that the source is not looped (due to source recycling)
-            AL.Source(SourceId, ALSourceb.Looping, false);
+            AL.Source(_sourceId, ALSourceb.Looping, false);
             ALHelper.CheckError("Failed to set source loop state.");
 
-            AL.SourcePlay(SourceId);
+            AL.SourcePlay(_sourceId);
             ALHelper.CheckError("Failed to play the source.");
         }
 
         private void PlatformPause()
         {
             AL.GetError();
-            AL.SourcePause(SourceId);
+            AL.SourcePause(_sourceId);
             ALHelper.CheckError("Failed to pause the source.");
         }
 
         private void PlatformResume()
         {
             AL.GetError();
-            AL.SourcePlay(SourceId);
+            AL.SourcePlay(_sourceId);
             ALHelper.CheckError("Failed to play the source.");
         }
 
         private void PlatformStop()
         {
             AL.GetError();
-            AL.SourceStop(SourceId);
+            AL.SourceStop(_sourceId);
             ALHelper.CheckError("Failed to stop the source.");
 
             // Remove all queued buffers
-            AL.Source(SourceId, ALSourcei.Buffer, 0);
+            AL.Source(_sourceId, ALSourcei.Buffer, 0);
             while (_queuedBuffers.Count > 0)
             {
                 var buffer = _queuedBuffers.Dequeue();
@@ -73,7 +73,7 @@ namespace Microsoft.Xna.Framework.Audio
         private void PlatformSubmitBuffer(byte[] buffer, int offset, int count)
         {
             // Get a buffer
-            OALSoundBuffer oalBuffer = new OALSoundBuffer();
+            OALSoundBuffer oalBuffer = new OALSoundBuffer(AudioService.Current);
 
             // Bind the data
             if (offset == 0)
@@ -90,14 +90,14 @@ namespace Microsoft.Xna.Framework.Audio
 
             // Queue the buffer
             _queuedBuffers.Enqueue(oalBuffer);
-            AL.SourceQueueBuffer(SourceId, oalBuffer.OpenALDataBuffer);
-            ALHelper.CheckError();
+            AL.SourceQueueBuffer(_sourceId, oalBuffer.OpenALDataBuffer);
+            ALHelper.CheckError("Failed to queue the buffer.");
 
             // If the source has run out of buffers, restart it
-            var sourceState = AL.GetSourceState(SourceId);
-            if (_state == SoundState.Playing && sourceState == ALSourceState.Stopped)
+            var sourceState = AL.GetSourceState(_sourceId);
+            if (_dynamicState == SoundState.Playing && sourceState == ALSourceState.Stopped)
             {
-                AL.SourcePlay(SourceId);
+                AL.SourcePlay(_sourceId);
                 ALHelper.CheckError("Failed to resume source playback.");
             }
         }
@@ -115,7 +115,7 @@ namespace Microsoft.Xna.Framework.Audio
                     buffer.Dispose();
                 }
 
-                DynamicSoundEffectInstanceManager.RemoveInstance(this);
+                _audioService.RemoveDynamicPlayingInstance(this);
             }
         }
 
@@ -124,13 +124,13 @@ namespace Microsoft.Xna.Framework.Audio
             // Get the completed buffers
             AL.GetError();
             int numBuffers;
-            AL.GetSource(SourceId, ALGetSourcei.BuffersProcessed, out numBuffers);
+            AL.GetSource(_sourceId, ALGetSourcei.BuffersProcessed, out numBuffers);
             ALHelper.CheckError("Failed to get processed buffer count.");
 
             // Unqueue them
             if (numBuffers > 0)
             {
-                AL.SourceUnqueueBuffers(SourceId, numBuffers);
+                AL.SourceUnqueueBuffers(_sourceId, numBuffers);
                 ALHelper.CheckError("Failed to unqueue buffers.");
                 for (int i = 0; i < numBuffers; i++)
                 {

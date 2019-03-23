@@ -56,9 +56,11 @@ namespace Microsoft.Xna.Framework.Audio
         {            
         }
 
-        internal static Stream OpenStream(string filePath, bool useMemoryStream = false)
+        internal static Stream OpenStream(string filePath, bool requireSeek = false)
         {
             var stream = TitleContainer.OpenStream(filePath);
+
+            var useMemoryStream = (requireSeek && !stream.CanSeek);
 
             // Read the asset into memory in one go. This results in a ~50% reduction
             // in load times on Android due to slow Android asset streams.
@@ -304,7 +306,7 @@ namespace Microsoft.Xna.Framework.Audio
                     _reverbSettings[parameter] = result;
                 }
 
-                SoundEffect.PlatformSetReverbSettings(_reverbSettings);
+                AudioService.Current.PlatformSetReverbSettings(_reverbSettings);
             }
         }
         

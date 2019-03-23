@@ -22,6 +22,11 @@ namespace Microsoft.Xna.Framework.Audio
 			throw new NotImplementedException();
         }
 		
+        internal bool PlatformIsHeadset()
+        {
+            throw new NotImplementedException();
+        }
+
 		internal void Update()
 		{
 			throw new NotImplementedException();

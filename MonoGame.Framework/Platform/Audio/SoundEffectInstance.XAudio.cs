@@ -2,6 +2,8 @@
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE.txt', which is part of this source code package.
 
+// Copyright (C)2021 Nick Kastellanos
+
 using System;
 using SharpDX.XAudio2;
 using SharpDX.X3DAudio;
@@ -10,12 +12,11 @@ using SharpDX.Mathematics.Interop;
 
 namespace Microsoft.Xna.Framework.Audio
 {
-    public partial class SoundEffectInstance : IDisposable
+    public partial class SoundEffectInstance
     {
         private static float[] _defaultChannelAzimuths = new float[] { 0f, 0f };
 
         internal SourceVoice _voice;
-        internal WaveFormat _format;
 
         private SharpDX.XAudio2.Fx.Reverb _reverb;
 
@@ -23,18 +24,40 @@ namespace Microsoft.Xna.Framework.Audio
 
         private float _reverbMix;
 
-        private bool _paused;
-        private bool _loop;
-
-        private void PlatformInitialize(byte[] buffer, int sampleRate, int channels)
+        internal void PlatformConstruct()
         {
-            throw new NotImplementedException();
+            _voice = new SourceVoice(_audioService.Device, _effect._format, VoiceFlags.UseFilter, XAudio2.MaximumFrequencyRatio);
+            UpdateOutputMatrix(); // Ensure the output matrix is set for this new voice
+        }
+
+        internal void PlatformReuseInstance(SoundEffect newEffect)
+        {
+            if (!ReferenceEquals(_effect, newEffect))
+            {
+                // check if we can reuse voice
+                if (_effect._format.Encoding != newEffect._format.Encoding ||
+                    _effect._format.Channels != newEffect._format.Channels ||
+                    _effect._format.SampleRate != newEffect._format.SampleRate ||
+                    _effect._format.BitsPerSample != newEffect._format.BitsPerSample)
+                {
+                    _voice.DestroyVoice();
+                    _voice.Dispose();
+                    _voice = null;
+
+                    // recreate voice
+                    _voice = new SourceVoice(_audioService.Device, newEffect._format, VoiceFlags.UseFilter, XAudio2.MaximumFrequencyRatio);
+                    UpdateOutputMatrix(); // Ensure the output matrix is set for this new voice                    
+                }
+
+                _effect = newEffect;
+            }
+
         }
 
         private void PlatformApply3D(AudioListener listener, AudioEmitter emitter)
         {
             // If we have no voice then nothing to do.
-            if (_voice == null || SoundEffect.MasterVoice == null)
+            if (_voice == null || _audioService.MasterVoice == null)
                 return;
 
             // Convert from XNA Emitter to a SharpDX Emitter
@@ -42,13 +65,13 @@ namespace Microsoft.Xna.Framework.Audio
             e.CurveDistanceScaler = SoundEffect.DistanceScale;
             e.DopplerScaler = SoundEffect.DopplerScale;
             e.ChannelCount = _effect._format.Channels;
-            
+
             //stereo channel
             if (e.ChannelCount > 1)
             {
                 e.ChannelRadius = 0;
                 e.ChannelAzimuths = _defaultChannelAzimuths;
-             }
+            }
 
             // Convert from XNA Listener to a SharpDX Listener
             var l = ToDXListener(listener);
@@ -58,13 +81,13 @@ namespace Microsoft.Xna.Framework.Audio
             var srcChannelCount = _effect._format.Channels;
 
             // Number of output channels.
-            var dstChannelCount = SoundEffect.MasterVoice.VoiceDetails.InputChannelCount;
+            var dstChannelCount = _audioService.MasterVoice.VoiceDetails.InputChannelCount;
 
             // XNA supports distance attenuation and doppler.            
-            var dpsSettings = SoundEffect.Device3D.Calculate(l, e, CalculateFlags.Matrix | CalculateFlags.Doppler, srcChannelCount, dstChannelCount);
+            var dpsSettings = _audioService.Device3D.Calculate(l, e, CalculateFlags.Matrix | CalculateFlags.Doppler, srcChannelCount, dstChannelCount);
 
             // Apply Volume settings (from distance attenuation) ...
-            _voice.SetOutputMatrix(SoundEffect.MasterVoice, srcChannelCount, dstChannelCount, dpsSettings.MatrixCoefficients, 0);
+            _voice.SetOutputMatrix(_audioService.MasterVoice, srcChannelCount, dstChannelCount, dpsSettings.MatrixCoefficients, 0);
 
             // Apply Pitch settings (from doppler) ...
             _voice.SetFrequencyRatio(dpsSettings.DopplerFactor);
@@ -152,106 +175,109 @@ namespace Microsoft.Xna.Framework.Audio
 
         private void PlatformPause()
         {
-            if (_voice != null && SoundEffect.MasterVoice != null)
-                _voice.Stop();
-            _paused = true;
+            _voice.Stop();
         }
 
         private void PlatformPlay()
         {
-            if (_voice != null && SoundEffect.MasterVoice != null)
+            // Choose the correct buffer depending on if we are looped.
+            var buffer = _effect.GetDXDataBuffer(_isLooped);
+
+            if (_voice.State.BuffersQueued > 0)
             {
-                // Choose the correct buffer depending on if we are looped.            
-                var buffer = _loop ? _effect._loopedBuffer : _effect._buffer;
-
-                if (_voice.State.BuffersQueued > 0)
-                {
-                    _voice.Stop();
-                    _voice.FlushSourceBuffers();
-                }
-
-                _voice.SubmitSourceBuffer(buffer, null);
-                _voice.Start();
+                _voice.Stop();
+                _voice.FlushSourceBuffers();
             }
 
-            _paused = false;
+            _voice.SubmitSourceBuffer(buffer, null);
+            _voice.Start();
         }
 
         private void PlatformResume()
         {
-            if (_voice != null && SoundEffect.MasterVoice != null)
+            // Restart the sound if (and only if) it stopped playing
+            if (!_isLooped)
             {
-                // Restart the sound if (and only if) it stopped playing
-                if (!_loop)
+                if (_voice.State.BuffersQueued == 0)
                 {
-                    if (_voice.State.BuffersQueued == 0)
-                    {
-                        _voice.Stop();
-                        _voice.FlushSourceBuffers();
-                        _voice.SubmitSourceBuffer(_effect._buffer, null);
-                    }
+                    _voice.Stop();
+                    _voice.FlushSourceBuffers();
+                    var buffer = _effect.GetDXDataBuffer(false);
+                    _voice.SubmitSourceBuffer(buffer, null);
                 }
-                _voice.Start();
             }
-            _paused = false;
+            _voice.Start();
         }
 
-        private void PlatformStop(bool immediate)
+        private void PlatformStop()
         {
-            if (_voice != null && SoundEffect.MasterVoice != null)
+            _voice.Stop();
+            _voice.FlushSourceBuffers();
+        }
+
+        private void PlatformRelease()
+        {
+            if (_isLooped)
+                _voice.ExitLoop();
+            else
+                _voice.Stop((int)PlayFlags.Tails);
+        }
+
+        internal void PlatformUpdateState()
+        {
+            // check if the sound has stopped
+            if (_state == SoundState.Playing)
             {
-                if (immediate)
+                // If no voice or no buffers queued the sound is stopped.
+                if (_audioService.MasterVoice == null || _voice.State.BuffersQueued == 0)
                 {
-                    _voice.Stop(0);
-                    _voice.FlushSourceBuffers();
+                    // update instance
+                    _state = SoundState.Stopped;
+
+                    _audioService.RemovePlayingInstance(this);
+                    _audioService.AddPooledInstance(this);
+                }
+            }
+        }
+
+        private void PlatformSetIsLooped(bool isLooped)
+        {
+            if (State == SoundState.Playing)
+            {
+                if (!isLooped)
+                {
+                    // release loop while sound is playing
+                    _voice.ExitLoop();
                 }
                 else
                 {
-                    if (_loop)
-                        _voice.ExitLoop();
-                    else
-                        _voice.Stop((int)PlayFlags.Tails);
+                    // enable loop while sound is playing
+                    var loopedBuffer = _effect.GetDXDataBuffer(true);
+                    _voice.SubmitSourceBuffer(loopedBuffer, null);
                 }
             }
-
-            _paused = false;
-        }
-
-        private void PlatformSetIsLooped(bool value)
-        {
-            _loop = value;
-        }
-
-        private bool PlatformGetIsLooped()
-        {
-            return _loop;
         }
 
         private void PlatformSetPan(float value)
         {
-            // According to XNA documentation:
-            // "Panning, ranging from -1.0f (full left) to 1.0f (full right). 0.0f is centered."
-            _pan = MathHelper.Clamp(value, -1.0f, 1.0f);
-
-            // If we have no voice then nothing more to do.
-            if (_voice == null || SoundEffect.MasterVoice == null)
-                return;
-
-            UpdateOutputMatrix();
+            if (_voice != null && _audioService.MasterVoice != null)
+            {
+                UpdateOutputMatrix();
+            }
         }
 
         internal void UpdateOutputMatrix()
         {
             var srcChannelCount = _voice.VoiceDetails.InputChannelCount;
-            var dstChannelCount = SoundEffect.MasterVoice.VoiceDetails.InputChannelCount;
+            var dstChannelCount = _audioService.MasterVoice.VoiceDetails.InputChannelCount;
 
             // Set the pan on the correct channels based on the reverb mix.
             if (!(_reverbMix > 0.0f))
                 _voice.SetOutputMatrix(srcChannelCount, dstChannelCount, CalculateOutputMatrix(_pan, 1.0f, srcChannelCount));
             else
             {
-                _voice.SetOutputMatrix(SoundEffect.ReverbVoice, srcChannelCount, dstChannelCount, CalculateOutputMatrix(_pan, _reverbMix, srcChannelCount));
-                _voice.SetOutputMatrix(SoundEffect.MasterVoice, srcChannelCount, dstChannelCount, CalculateOutputMatrix(_pan, 1.0f - Math.Min(_reverbMix, 1.0f), srcChannelCount));
+                _voice.SetOutputMatrix(_audioService.ReverbVoice, srcChannelCount, dstChannelCount, CalculateOutputMatrix(_pan, _reverbMix, srcChannelCount));
+                _voice.SetOutputMatrix(_audioService.MasterVoice, srcChannelCount, dstChannelCount, CalculateOutputMatrix(_pan, 1.0f - Math.Min(_reverbMix, 1.0f), srcChannelCount));
             }
         }
 
@@ -302,32 +328,18 @@ namespace Microsoft.Xna.Framework.Audio
         {
             _pitch = value;
 
-            if (_voice == null || SoundEffect.MasterVoice == null)
+            if (_voice == null || _audioService.MasterVoice == null)
                 return;
 
             // NOTE: This is copy of what XAudio2.SemitonesToFrequencyRatio() does
             // which avoids the native call and is actually more accurate.
-             var pitch = (float)Math.Pow(2.0, value);
-             _voice.SetFrequencyRatio(pitch);
-        }
-
-        private SoundState PlatformGetState()
-        {
-            // If no voice or no buffers queued the sound is stopped.
-            if (_voice == null || SoundEffect.MasterVoice == null || _voice.State.BuffersQueued == 0)
-                return SoundState.Stopped;
-
-            // Because XAudio2 does not actually provide if a SourceVoice is Started / Stopped
-            // we have to save the "paused" state ourself.
-            if (_paused)
-                return SoundState.Paused;
-
-            return SoundState.Playing;
+            var pitch = (float)Math.Pow(2.0, value);
+            _voice.SetFrequencyRatio(pitch);
         }
 
         private void PlatformSetVolume(float value)
         {
-            if (_voice != null && SoundEffect.MasterVoice != null)
+            if (_voice != null && _audioService.MasterVoice != null)
                 _voice.SetVolume(value, XAudio2.CommitNow);
         }
 
@@ -337,15 +349,15 @@ namespace Microsoft.Xna.Framework.Audio
             _reverbMix = MathHelper.Clamp(mix, 0, 2);
 
             // If we have no voice then nothing more to do.
-            if (_voice == null || SoundEffect.MasterVoice == null)
+            if (_voice == null || _audioService.MasterVoice == null)
                 return;
 
             if (!(_reverbMix > 0.0f))
-                _voice.SetOutputVoices(new VoiceSendDescriptor(SoundEffect.MasterVoice));
+                _voice.SetOutputVoices(new VoiceSendDescriptor(_audioService.MasterVoice));
             else
             {
-                _voice.SetOutputVoices( new VoiceSendDescriptor(SoundEffect.ReverbVoice), 
-                                        new VoiceSendDescriptor(SoundEffect.MasterVoice));
+                _voice.SetOutputVoices(new VoiceSendDescriptor(_audioService.ReverbVoice),
+                                        new VoiceSendDescriptor(_audioService.MasterVoice));
             }
 
             UpdateOutputMatrix();
@@ -353,25 +365,25 @@ namespace Microsoft.Xna.Framework.Audio
 
         internal void PlatformSetFilter(FilterMode mode, float filterQ, float frequency)
         {
-            if (_voice == null || SoundEffect.MasterVoice == null)
+            if (_voice == null || _audioService.MasterVoice == null)
                 return;
 
-            var filter = new FilterParameters 
+            var filter = new FilterParameters
             {
-                Frequency = XAudio2.CutoffFrequencyToRadians(frequency, _voice.VoiceDetails.InputSampleRate), 
-                OneOverQ = 1.0f / filterQ, 
-                Type = (FilterType)mode 
+                Frequency = XAudio2.CutoffFrequencyToRadians(frequency, _voice.VoiceDetails.InputSampleRate),
+                OneOverQ = 1.0f / filterQ,
+                Type = (FilterType)mode
             };
             _voice.SetFilterParameters(filter);
         }
 
         internal void PlatformClearFilter()
         {
-            if (_voice == null || SoundEffect.MasterVoice == null)
+            if (_voice == null || _audioService.MasterVoice == null)
                 return;
 
             var filter = new FilterParameters { Frequency = 1.0f, OneOverQ = 1.0f, Type = FilterType.LowPassFilter };
-            _voice.SetFilterParameters(filter);            
+            _voice.SetFilterParameters(filter);
         }
 
         private void PlatformDispose(bool disposing)
@@ -379,17 +391,19 @@ namespace Microsoft.Xna.Framework.Audio
             if (disposing)
             {
                 if (_reverb != null)
-                    _reverb.Dispose();
-
-                if (_voice != null && SoundEffect.MasterVoice != null)
                 {
-                    _voice.DestroyVoice();
+                    _reverb.Dispose();
+                    _reverb = null;
+                }
+
+                if (_audioService.MasterVoice != null)
+                {
+                    _voice.DestroyVoice(); // TODO: _voice.Dispose() should also destroy voice
                     _voice.Dispose();
+                    _voice = null;
                 }
             }
-            _voice = null;
-            _effect = null;
-            _reverb = null;
+
         }
     }
 }

@@ -65,20 +65,13 @@ namespace Microsoft.Xna.Framework.Audio
             }
         }
 
-        // always true on mobile, this can't be queried on any platform (it was most probably only set to true if the headset was plugged in an XInput controller)
-#if IOS || ANDROID
-        private const bool _isHeadset = true;
-#else
-        private const bool _isHeadset = false;
-#endif
         /// <summary>
         /// Determines if the microphone is a wired headset.
         /// Note: XNA could know if a headset microphone was plugged in an Xbox 360 controller but MonoGame can't.
-        /// Hence, this is always true on mobile platforms, and always false otherwise.
         /// </summary>
         public bool IsHeadset
         {
-            get { return _isHeadset; }
+            get { return PlatformIsHeadset(); }
         }
 
         private int _sampleRate = 44100; // XNA default is 44100, don't know if it supports any other rates
@@ -115,7 +108,6 @@ namespace Microsoft.Xna.Framework.Audio
         {
             get
             {
-                SoundEffect.Initialize();                
                 if (_allMicrophones == null)
                     _allMicrophones = new List<Microphone>();
                 return new ReadOnlyCollection<Microphone>(_allMicrophones);
@@ -129,7 +121,7 @@ namespace Microsoft.Xna.Framework.Audio
         /// </summary>
         public static Microphone Default
         {
-            get { SoundEffect.Initialize(); return _default; }
+            get { return _default; }
         }       
 
         #endregion

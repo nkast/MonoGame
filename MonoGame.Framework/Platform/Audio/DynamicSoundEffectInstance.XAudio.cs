@@ -2,6 +2,8 @@
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE.txt', which is part of this source code package.
 
+// Copyright (C)2021 Nick Kastellanos
+
 using System;
 using System.Collections.Generic;
 using MonoGame.Framework.Utilities;
@@ -17,10 +19,10 @@ namespace Microsoft.Xna.Framework.Audio
         private Queue<byte[]> _pooledBuffers;
         private static ByteBufferPool _bufferPool = new ByteBufferPool();
 
-        private void PlatformCreate()
+        private void PlatformConstructDynamic()
         {
-            _format = new WaveFormat(_sampleRate, (int)_channels);
-            _voice = new SourceVoice(SoundEffect.Device, _format, true);
+            var format = new WaveFormat(_sampleRate, (int)_channels);            
+            _voice = new SourceVoice(_audioService.Device, format, true);
             _voice.BufferEnd += OnBufferEnd;
             _queuedBuffers = new Queue<AudioBuffer>();
             _pooledBuffers = new Queue<byte[]>();
@@ -36,14 +38,14 @@ namespace Microsoft.Xna.Framework.Audio
             _voice.Start();
         }
 
-        private void PlatformPause()
-        {
-            _voice.Stop();
-        }
-
         private void PlatformResume()
         {
             _voice.Start();
+        }
+
+        private void PlatformPause()
+        {
+            _voice.Stop();
         }
 
         private void PlatformStop()

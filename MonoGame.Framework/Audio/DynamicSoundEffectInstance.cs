@@ -2,6 +2,8 @@
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE.txt', which is part of this source code package.
 
+// Copyright (C)2021 Nick Kastellanos
+
 using System;
 using System.Collections.Generic;
 
@@ -38,7 +40,7 @@ namespace Microsoft.Xna.Framework.Audio
             get
             {
                 AssertNotDisposed();
-                return _state;
+                return _dynamicState;
             }
         }
 
@@ -68,18 +70,18 @@ namespace Microsoft.Xna.Framework.Audio
         private int _buffersNeeded;
         private int _sampleRate;
         private AudioChannels _channels;
-        private SoundState _state;
+        private SoundState _dynamicState;
+
+        internal LinkedListNode<DynamicSoundEffectInstance> DynamicPlayingInstancesNode { get; private set; }
+
 
         #region Public Constructor
 
         /// <param name="sampleRate">Sample rate, in Hertz (Hz).</param>
         /// <param name="channels">Number of channels (mono or stereo).</param>
-        public DynamicSoundEffectInstance(int sampleRate, AudioChannels channels)
+        public DynamicSoundEffectInstance(int sampleRate, AudioChannels channels) 
+            : base(AudioService.Current)
         {
-            SoundEffect.Initialize();
-            if (SoundEffect._systemState != SoundEffect.SoundSystemState.Initialized)
-                throw new NoAudioHardwareException("Audio has failed to initialize. Call SoundEffect.Initialize() before sound operation to get more specific errors.");
-
             if ((sampleRate < 8000) || (sampleRate > 48000))
                 throw new ArgumentOutOfRangeException("sampleRate");
             if ((channels != AudioChannels.Mono) && (channels != AudioChannels.Stereo))
@@ -87,13 +89,13 @@ namespace Microsoft.Xna.Framework.Audio
 
             _sampleRate = sampleRate;
             _channels = channels;
-            _state = SoundState.Stopped;
-            PlatformCreate();
-            
+            _dynamicState = SoundState.Stopped;
+            PlatformConstructDynamic();
+
             // This instance is added to the pool so that its volume reflects master volume changes
             // and it contributes to the playing instances limit, but the source/voice is not owned by the pool.
-            _isPooled = false;
-            _isDynamic = true;
+            DynamicPlayingInstancesNode = new LinkedListNode<DynamicSoundEffectInstance>(this);
+            base._isDynamic = true;
         }
 
         #endregion
@@ -123,38 +125,68 @@ namespace Microsoft.Xna.Framework.Audio
         }
 
         /// <summary>
-        /// Plays or resumes the DynamicSoundEffectInstance.
-        /// </summary>
-        public override void Play()
-        {
-            AssertNotDisposed();
-
-            if (_state != SoundState.Playing)
-            {
-                // Ensure that the volume reflects master volume, which is done by the setter.
-                Volume = Volume;
-
-                // Add the instance to the pool
-                if (!SoundEffectInstancePool.SoundsAvailable)
-                    throw new InstancePlayLimitException();
-                SoundEffectInstancePool.Remove(this);
-
-                PlatformPlay();
-                _state = SoundState.Playing;
-
-                CheckBufferCount();
-                DynamicSoundEffectInstanceManager.AddInstance(this);
-            }
-        }
-
-        /// <summary>
         /// Pauses playback of the DynamicSoundEffectInstance.
         /// </summary>
         public override void Pause()
         {
-            AssertNotDisposed();
-            PlatformPause();
-            _state = SoundState.Paused;
+            lock (AudioService.SyncHandle)
+            {
+                AssertNotDisposed();
+
+                var state = _dynamicState;
+                switch (state)
+                {
+                    case SoundState.Paused:
+                        return;
+                    case SoundState.Stopped:
+                        return;
+                    case SoundState.Playing:
+                        {      
+                            PlatformPause();
+                            _dynamicState = SoundState.Paused;
+
+                            AudioService.Current.RemovePlayingInstance(this);
+                            AudioService.Current.RemoveDynamicPlayingInstance(this);
+                        }
+                        return;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Plays or resumes the DynamicSoundEffectInstance.
+        /// </summary>
+        public override void Play()
+        {
+            lock (AudioService.SyncHandle)
+            {
+                AssertNotDisposed();
+
+                var state = _dynamicState;
+                switch (state)
+                {
+                    case SoundState.Playing:
+                        return;
+                    case SoundState.Paused:
+                        Resume();
+                        return;
+                    case SoundState.Stopped:
+                        {
+                            // Ensure that the volume reflects master volume, which is done by the setter.
+                            Volume = Volume;
+
+                            PlatformPlay();
+                            _dynamicState = SoundState.Playing;
+
+                            AudioService.Current.AddPlayingInstance(this);
+
+                            CheckBufferCount();
+
+                            AudioService.Current.AddDynamicPlayingInstance(this);
+                        }
+                        return;
+                }               
+            }
         }
 
         /// <summary>
@@ -162,20 +194,31 @@ namespace Microsoft.Xna.Framework.Audio
         /// </summary>
         public override void Resume()
         {
-            AssertNotDisposed();
-
-            if (_state != SoundState.Playing)
+            lock (AudioService.SyncHandle)
             {
-                Volume = Volume;
+                AssertNotDisposed();
 
-                // Add the instance to the pool
-                if (!SoundEffectInstancePool.SoundsAvailable)
-                    throw new InstancePlayLimitException();
-                SoundEffectInstancePool.Remove(this);
+                var state = _dynamicState;
+                switch (state)
+                {
+                    case SoundState.Playing:
+                        return;
+                    case SoundState.Stopped:
+                        Play();
+                        return;
+                    case SoundState.Paused:
+                        {
+                            Volume = Volume;
+
+                            PlatformResume();
+                            _dynamicState = SoundState.Playing;
+
+                            AudioService.Current.AddPlayingInstance(this);
+                            AudioService.Current.AddDynamicPlayingInstance(this);
+                        }
+                        return;
+                }
             }
-
-            PlatformResume();
-            _state = SoundState.Playing;
         }
 
         /// <summary>
@@ -186,7 +229,28 @@ namespace Microsoft.Xna.Framework.Audio
         /// </remarks>
         public override void Stop()
         {
-            Stop(true);
+            lock (AudioService.SyncHandle)
+            {
+                AssertNotDisposed();
+
+                var state = _dynamicState;
+                switch (state)
+                {
+                    case SoundState.Stopped:
+                        PlatformStop(); // Dequeue all the submitted buffers
+                        return;
+                    case SoundState.Paused:
+                    case SoundState.Playing:
+                        {
+                            PlatformStop();
+                            _dynamicState = SoundState.Stopped;
+
+                            AudioService.Current.RemovePlayingInstance(this);
+                            AudioService.Current.RemoveDynamicPlayingInstance(this);
+                        }
+                        return;
+                }
+            }
         }
 
         /// <summary>
@@ -199,16 +263,18 @@ namespace Microsoft.Xna.Framework.Audio
         /// <param name="immediate">When set to false, this call has no effect.</param>
         public override void Stop(bool immediate)
         {
-            AssertNotDisposed();
-            
             if (immediate)
             {
-                DynamicSoundEffectInstanceManager.RemoveInstance(this);
+                Stop();
+                return;
+            }
 
-                PlatformStop();
-                _state = SoundState.Stopped;
 
-                SoundEffectInstancePool.Add(this);
+            
+            lock (AudioService.SyncHandle)
+            {
+                AssertNotDisposed();
+                // TODO: exit loop
             }
         }
 
@@ -272,18 +338,21 @@ namespace Microsoft.Xna.Framework.Audio
         private void AssertNotDisposed()
         {
             if (IsDisposed)
-                throw new ObjectDisposedException(null);
+                throw new ObjectDisposedException("DynamicSoundEffectInstance");
         }
 
         protected override void Dispose(bool disposing)
         {
             PlatformDispose(disposing);
             base.Dispose(disposing);
+
+            DynamicPlayingInstancesNode = null;
         }
 
         private void CheckBufferCount()
         {
-            if ((PendingBufferCount < TargetPendingBufferCount) && (_state == SoundState.Playing))
+            if ((PendingBufferCount < TargetPendingBufferCount) &&
+                (_dynamicState == SoundState.Playing))
                 _buffersNeeded++;
         }
 

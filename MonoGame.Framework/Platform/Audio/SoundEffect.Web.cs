@@ -1,26 +1,19 @@
 // MonoGame - Copyright (C) The MonoGame Team
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE.txt', which is part of this source code package.
-﻿
-using System;
-using System.Collections.Generic;
-using System.IO;
 
-using Microsoft.Xna;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Audio;
+// Copyright (C)2021 Nick Kastellanos
+
+using System;
+using System.IO;
 
 namespace Microsoft.Xna.Framework.Audio
 {
-    public sealed partial class SoundEffect : IDisposable
+    partial class SoundEffect
     {
-        // This platform is only limited by memory.
-        internal const int MAX_PLAYING_INSTANCES = int.MaxValue;
 
-        private void PlatformLoadAudioStream(Stream s, out TimeSpan duration)
-        {
-            duration = TimeSpan.Zero;
-        }
+        #region Initialization
+
 
         private void PlatformInitializePcm(byte[] buffer, int offset, int count, int sampleBits, int sampleRate, AudioChannels channels, int loopStart, int loopLength)
         {
@@ -35,25 +28,17 @@ namespace Microsoft.Xna.Framework.Audio
             throw new NotSupportedException("Unsupported sound format!");
         }
 
-        private void PlatformSetupInstance(SoundEffectInstance instance)
+        private void PlatformLoadAudioStream(Stream stream, out TimeSpan duration)
         {
+            duration = TimeSpan.Zero;
         }
+
+        #endregion
 
         private void PlatformDispose(bool disposing)
         {
         }
 
-        internal static void PlatformSetReverbSettings(ReverbSettings reverbSettings)
-        {
-        }
-
-        internal static void PlatformInitialize()
-        {
-        }
-
-        internal static void PlatformShutdown()
-        {
-        }
     }
 }
 

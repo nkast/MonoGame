@@ -1,11 +1,14 @@
+// MonoGame - Copyright (C) The MonoGame Team
+// This file is subject to the terms and conditions defined in
+// file 'LICENSE.txt', which is part of this source code package.
+
+// Copyright (C)2021 Nick Kastellanos
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
 using System.Runtime.InteropServices;
-using MonoGame.Framework.Utilities;
 using MonoGame.OpenAL;
-using MonoGame.OpenGL;
 
 #if ANDROID
 using System.Globalization;
@@ -16,78 +19,33 @@ using Android.Media;
 
 #if IOS
 using AudioToolbox;
+using AudioUnit;
 using AVFoundation;
 #endif
 
+
 namespace Microsoft.Xna.Framework.Audio
 {
-    internal static class ALHelper
+    internal partial class AudioService
     {
-        [System.Diagnostics.Conditional("DEBUG")]
-        [System.Diagnostics.DebuggerHidden]
-        internal static void CheckError(string message = "", params object[] args)
-        {
-            ALError error;
-            if ((error = AL.GetError()) != ALError.NoError)
-            {
-                if (args != null && args.Length > 0)
-                    message = String.Format(message, args);
-                
-                throw new InvalidOperationException(message + " (Reason: " + AL.GetErrorString(error) + ")");
-            }
-        }
 
-        public static bool IsStereoFormat(ALFormat format)
-        {
-            return (format == ALFormat.Stereo8
-                || format == ALFormat.Stereo16
-                || format == ALFormat.StereoFloat32
-                || format == ALFormat.StereoIma4
-                || format == ALFormat.StereoMSAdpcm);
-        }
-    }
+#if DESKTOPGL || ANGLE
+        // MacOS & Linux shares a limit of 256.
+        internal const int MAX_PLAYING_INSTANCES = 256;
+#elif IOS
+        // Reference: http://stackoverflow.com/questions/3894044/maximum-number-of-openal-sound-buffers-on-iphone
+        internal const int MAX_PLAYING_INSTANCES = 32;
+#elif ANDROID
+        // Set to the same as OpenAL on iOS
+        internal const int MAX_PLAYING_INSTANCES = 32;
+#endif
 
-    internal static class AlcHelper
-    {
-        [System.Diagnostics.Conditional("DEBUG")]
-        [System.Diagnostics.DebuggerHidden]
-        internal static void CheckError(string message = "", params object[] args)
-        {
-            AlcError error;
-            if ((error = Alc.GetError()) != AlcError.NoError)
-            {
-                if (args != null && args.Length > 0)
-                    message = String.Format(message, args);
 
-                throw new InvalidOperationException(message + " (Reason: " + error.ToString() + ")");
-            }
-        }
-    }
-
-    internal sealed class OpenALSoundController : IDisposable
-    {
-        private static OpenALSoundController _instance = null;
-        private static EffectsExtension _efx = null;
+        private EffectsExtension _efx = null;
         private IntPtr _device;
         private IntPtr _context;
         IntPtr NullContext = IntPtr.Zero;
-        private int[] allSourcesArray;
-#if DESKTOPGL || ANGLE
 
-        // MacOS & Linux shares a limit of 256.
-        internal const int MAX_NUMBER_OF_SOURCES = 256;
-
-#elif IOS
-
-        // Reference: http://stackoverflow.com/questions/3894044/maximum-number-of-openal-sound-buffers-on-iphone
-        internal const int MAX_NUMBER_OF_SOURCES = 32;
-
-#elif ANDROID
-
-        // Set to the same as OpenAL on iOS
-        internal const int MAX_NUMBER_OF_SOURCES = 32;
-
-#endif
 #if ANDROID
         private const int DEFAULT_FREQUENCY = 48000;
         private const int DEFAULT_UPDATE_SIZE = 512;
@@ -95,18 +53,29 @@ namespace Microsoft.Xna.Framework.Audio
 #elif DESKTOPGL
         private static OggStreamer _oggstreamer;
 #endif
-        private List<int> availableSourcesCollection;
-        private List<int> inUseSourcesCollection;
+        private Stack<int> _alSourcesPool = new Stack<int>(32);
         bool _isDisposed;
         public bool SupportsIma4 { get; private set; }
         public bool SupportsAdpcm { get; private set; }
         public bool SupportsEfx { get; private set; }
         public bool SupportsIeee { get; private set; }
+        
+        internal int ReverbSlot = 0;
+        internal int ReverbEffect = 0;
+        
+        public int Filter { get; private set; }
+        
+        public EffectsExtension Efx
+        {
+            get
+            {
+                if (_efx == null)
+                    _efx = new EffectsExtension();
+                return _efx;
+            }
+        }
 
-        /// <summary>
-        /// Sets up the hardware resources used by the controller.
-        /// </summary>
-		private OpenALSoundController()
+        private void PlatformCreate()
         {
             if (AL.NativeLibrary == IntPtr.Zero)
                 throw new DllNotFoundException("Couldn't initialize OpenAL because the native binaries couldn't be found.");
@@ -120,24 +89,13 @@ namespace Microsoft.Xna.Framework.Audio
                 Microphone.PopulateCaptureDevices();
 
             // We have hardware here and it is ready
-
-			allSourcesArray = new int[MAX_NUMBER_OF_SOURCES];
-			AL.GenSources(allSourcesArray);
-            ALHelper.CheckError("Failed to generate sources.");
             Filter = 0;
             if (Efx.IsInitialized)
             {
                 Filter = Efx.GenFilter();
             }
-            availableSourcesCollection = new List<int>(allSourcesArray);
-			inUseSourcesCollection = new List<int>();
-		}
-
-        ~OpenALSoundController()
-        {
-            Dispose(false);
         }
-
+        
         /// <summary>
         /// Open the sound device, sets up an audio context, and makes the new context
         /// the current context. Note that this method will stop the playback of
@@ -286,121 +244,50 @@ namespace Microsoft.Xna.Framework.Audio
             return false;
         }
 
-        public static void EnsureInitialized()
+        internal void PlatformSetReverbSettings(ReverbSettings reverbSettings)
         {
-            if (_instance == null)
-            {
-                try
-                {
-                    _instance = new OpenALSoundController();
-                }
-                catch (DllNotFoundException)
-                {
-                    throw;
-                }
-                catch (NoAudioHardwareException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    throw (new NoAudioHardwareException("Failed to init OpenALSoundController", ex));
-                }
-            }
+            if (!Efx.IsInitialized)
+                return;
+
+            if (ReverbEffect != 0)
+                return;
+
+            var efx = Efx;
+            efx.GenAuxiliaryEffectSlots(1, out ReverbSlot);
+            efx.GenEffect(out ReverbEffect);
+            efx.Effect(ReverbEffect, EfxEffecti.EffectType, (int)EfxEffectType.Reverb);
+            efx.Effect(ReverbEffect, EfxEffectf.EaxReverbReflectionsDelay, reverbSettings.ReflectionsDelayMs / 1000.0f);
+            efx.Effect(ReverbEffect, EfxEffectf.LateReverbDelay, reverbSettings.ReverbDelayMs / 1000.0f);
+            // map these from range 0-15 to 0-1
+            efx.Effect(ReverbEffect, EfxEffectf.EaxReverbDiffusion, reverbSettings.EarlyDiffusion / 15f);
+            efx.Effect(ReverbEffect, EfxEffectf.EaxReverbDiffusion, reverbSettings.LateDiffusion / 15f);
+            efx.Effect(ReverbEffect, EfxEffectf.EaxReverbGainLF, Math.Min(XactHelpers.ParseVolumeFromDecibels(reverbSettings.LowEqGain - 8f), 1.0f));
+            efx.Effect(ReverbEffect, EfxEffectf.EaxReverbLFReference, (reverbSettings.LowEqCutoff * 50f) + 50f);
+            efx.Effect(ReverbEffect, EfxEffectf.EaxReverbGainHF, XactHelpers.ParseVolumeFromDecibels(reverbSettings.HighEqGain - 8f));
+            efx.Effect(ReverbEffect, EfxEffectf.EaxReverbHFReference, (reverbSettings.HighEqCutoff * 500f) + 1000f);
+            // According to Xamarin docs EaxReverbReflectionsGain Unit: Linear gain Range [0.0f .. 3.16f] Default: 0.05f
+            efx.Effect(ReverbEffect, EfxEffectf.EaxReverbReflectionsGain, Math.Min(XactHelpers.ParseVolumeFromDecibels(reverbSettings.ReflectionsGainDb), 3.16f));
+            efx.Effect(ReverbEffect, EfxEffectf.EaxReverbGain, Math.Min(XactHelpers.ParseVolumeFromDecibels(reverbSettings.ReverbGainDb), 1.0f));
+            // map these from 0-100 down to 0-1
+            efx.Effect(ReverbEffect, EfxEffectf.EaxReverbDensity, reverbSettings.DensityPct / 100f);
+            efx.AuxiliaryEffectSlot(ReverbSlot, EfxEffectSlotf.EffectSlotGain, reverbSettings.WetDryMixPct / 200f);
+
+            // Dont know what to do with these EFX has no mapping for them. Just ignore for now
+            // we can enable them as we go. 
+            //efx.SetEffectParam (ReverbEffect, EfxEffectf.PositionLeft, reverbSettings.PositionLeft);
+            //efx.SetEffectParam (ReverbEffect, EfxEffectf.PositionRight, reverbSettings.PositionRight);
+            //efx.SetEffectParam (ReverbEffect, EfxEffectf.PositionLeftMatrix, reverbSettings.PositionLeftMatrix);
+            //efx.SetEffectParam (ReverbEffect, EfxEffectf.PositionRightMatrix, reverbSettings.PositionRightMatrix);
+            //efx.SetEffectParam (ReverbEffect, EfxEffectf.LowFrequencyReference, reverbSettings.RearDelayMs);
+            //efx.SetEffectParam (ReverbEffect, EfxEffectf.LowFrequencyReference, reverbSettings.RoomFilterFrequencyHz);
+            //efx.SetEffectParam (ReverbEffect, EfxEffectf.LowFrequencyReference, reverbSettings.RoomFilterMainDb);
+            //efx.SetEffectParam (ReverbEffect, EfxEffectf.LowFrequencyReference, reverbSettings.RoomFilterHighFrequencyDb);
+            //efx.SetEffectParam (ReverbEffect, EfxEffectf.LowFrequencyReference, reverbSettings.DecayTimeSec);
+            //efx.SetEffectParam (ReverbEffect, EfxEffectf.LowFrequencyReference, reverbSettings.RoomSizeFeet);
+
+            efx.BindEffectToAuxiliarySlot(ReverbSlot, ReverbEffect);
         }
 
-
-        public static OpenALSoundController Instance
-        {
-			get
-            {
-                if (_instance == null)
-                    throw new NoAudioHardwareException("OpenAL context has failed to initialize. Call SoundEffect.Initialize() before sound operation to get more specific errors.");
-				return _instance;
-			}
-		}
-
-        public static EffectsExtension Efx
-        {
-            get
-            {
-                if (_efx == null)
-                    _efx = new EffectsExtension();
-                return _efx;
-            }
-        }
-
-        public int Filter
-        {
-            get; private set;
-        }
-
-        public static void DestroyInstance()
-        {
-            if (_instance != null)
-            {
-                _instance.Dispose();
-                _instance = null;
-            }
-        }
-
-        /// <summary>
-        /// Destroys the AL context and closes the device, when they exist.
-        /// </summary>
-        private void CleanUpOpenAL()
-        {
-            Alc.MakeContextCurrent(NullContext);
-
-            if (_context != NullContext)
-            {
-                Alc.DestroyContext (_context);
-                _context = NullContext;
-            }
-            if (_device != IntPtr.Zero)
-            {
-                Alc.CloseDevice (_device);
-                _device = IntPtr.Zero;
-            }
-        }
-
-        /// <summary>
-        /// Dispose of the OpenALSoundCOntroller.
-        /// </summary>
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
-        /// Dispose of the OpenALSoundCOntroller.
-        /// </summary>
-        /// <param name="disposing">If true, the managed resources are to be disposed.</param>
-		void Dispose(bool disposing)
-		{
-            if (!_isDisposed)
-            {
-                if (disposing)
-                {
-#if DESKTOPGL
-                    if(_oggstreamer != null)
-                        _oggstreamer.Dispose();
-#endif
-                    for (int i = 0; i < allSourcesArray.Length; i++)
-                    {
-                        AL.DeleteSource(allSourcesArray[i]);
-                        ALHelper.CheckError("Failed to delete source.");
-                    }
-
-                    if (Filter != 0 && Efx.IsInitialized)
-                        Efx.DeleteFilter(Filter);
-
-                    Microphone.StopMicrophones();
-                    CleanUpOpenAL();                    
-                }
-                _isDisposed = true;
-            }
-		}
 
         /// <summary>
         /// Reserves a sound buffer and return its identifier. If there are no available sources
@@ -408,52 +295,31 @@ namespace Microsoft.Xna.Framework.Audio
         /// <see cref="InstancePlayLimitException"/> is thrown.
         /// </summary>
         /// <returns>The source number of the reserved sound buffer.</returns>
-		public int ReserveSource()
-		{
-            int sourceNumber;
+        public int ReserveSource()
+        {
+            if (_alSourcesPool.Count > 0)
+                return _alSourcesPool.Pop();
 
-            lock (availableSourcesCollection)
-            {                
-                if (availableSourcesCollection.Count == 0)
-                {
-                    throw new InstancePlayLimitException();
-                }
-
-                sourceNumber = availableSourcesCollection.Last();
-                inUseSourcesCollection.Add(sourceNumber);
-                availableSourcesCollection.Remove(sourceNumber);
-            }
-
-            return sourceNumber;
-		}
+            int src = AL.GenSource();
+            ALHelper.CheckError("Failed to generate source.");
+            return src;
+        }
 
         public void RecycleSource(int sourceId)
         {
             AL.Source(sourceId, ALSourcei.Buffer, 0);
             ALHelper.CheckError("Failed to free source from buffers.");
 
-            lock (availableSourcesCollection)
-            {
-                if (inUseSourcesCollection.Remove(sourceId))
-                    availableSourcesCollection.Add(sourceId);
-            }
+            _alSourcesPool.Push(sourceId);
         }
 
-        public void FreeSource(SoundEffectInstance inst)
+        public double SourceCurrentPosition(int sourceId)
         {
-            RecycleSource(inst.SourceId);
-            inst.SourceId = 0;
-            inst.HasSourceId = false;
-            inst.SoundState = SoundState.Stopped;
-		}
-
-        public double SourceCurrentPosition (int sourceId)
-		{
             int pos;
-			AL.GetSource (sourceId, ALGetSourcei.SampleOffset, out pos);
+            AL.GetSource(sourceId, ALGetSourcei.SampleOffset, out pos);
             ALHelper.CheckError("Failed to set source offset.");
-			return pos;
-		}
+            return pos;
+        }
 
 #if ANDROID
         void Activity_Paused(object sender, EventArgs e)
@@ -468,5 +334,53 @@ namespace Microsoft.Xna.Framework.Audio
             Alc.DeviceResume(_device);
         }
 #endif
+
+        private void PlatformDispose(bool disposing)
+        {
+            if (disposing)
+            {
+            }
+
+            if (ReverbEffect != 0)
+            {
+                Efx.DeleteAuxiliaryEffectSlot(ReverbSlot);
+                Efx.DeleteEffect((int)ReverbEffect);
+            }
+
+#if DESKTOPGL
+                if(_oggstreamer != null)
+                    _oggstreamer.Dispose();
+#endif
+
+            while (_alSourcesPool.Count > 0)
+            {
+                AL.DeleteSource(_alSourcesPool.Pop());
+                ALHelper.CheckError("Failed to delete source.");
+            }
+
+            if (Filter != 0 && Efx.IsInitialized)
+            {
+                Efx.DeleteFilter(Filter);
+            }
+
+            Microphone.StopMicrophones();
+
+            // CleanUpOpenAL
+            Alc.MakeContextCurrent(NullContext);
+
+            if (_context != NullContext)
+            {
+                Alc.DestroyContext(_context);
+            }
+
+            if (_device != IntPtr.Zero)
+            {
+                Alc.CloseDevice(_device);
+            }
+
+            _context = NullContext;
+            _device = IntPtr.Zero;
+        }
     }
 }
+
