@@ -11,7 +11,7 @@ using Android.Views;
 namespace Microsoft.Xna.Framework
 {
 	[CLSCompliant(false)]
-    public class AndroidGameActivity : Activity
+    public class AndroidGameActivity : Google.VRToolkit.Cardboard.CardboardActivity
     {
         internal Game Game { private get; set; }
 
