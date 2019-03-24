@@ -61,6 +61,13 @@ namespace Microsoft.Xna.Framework
             GameView = new MonoGameAndroidGameView(context, this, _game);
             GameView.RenderFrame += OnRenderFrame;
             GameView.UpdateFrame += OnUpdateFrame;
+                
+            ((Google.VRToolkit.Cardboard.CardboardActivity)context).CardboardView = GameView;
+            ((Android.App.Activity)context).SetContentView(GameView);
+                    
+            var surfaceRenderer = GameView as Google.VRToolkit.Cardboard.CardboardView.IRenderer;
+            GameView.SetRenderer(surfaceRenderer);
+
 
             GameView.RequestFocus();
             GameView.FocusableInTouchMode = true;

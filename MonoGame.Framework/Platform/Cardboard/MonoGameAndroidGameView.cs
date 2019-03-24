@@ -19,8 +19,8 @@ using Microsoft.Xna.Framework.Input.Touch;
 namespace Microsoft.Xna.Framework
 {
     [CLSCompliant(false)]
-    public class MonoGameAndroidGameView : SurfaceView, ISurfaceHolderCallback, View.IOnTouchListener
-        , Java.Lang.IRunnable
+    public class MonoGameAndroidGameView : Google.VRToolkit.Cardboard.CardboardView, View.IOnTouchListener, Java.Lang.IRunnable
+        , Google.VRToolkit.Cardboard.CardboardView.IRenderer
     {
         // What is the state of the app, for tracking surface recreation inside this class.
         // This acts as a replacement for the all-out monitor wait approach which caused code to be quite fragile.
@@ -38,7 +38,6 @@ namespace Microsoft.Xna.Framework
         }
 
         bool disposed = false;
-        ISurfaceHolder mHolder;
         System.Drawing.Size size;
 
         object _lockObject = new object();
@@ -87,14 +86,12 @@ namespace Microsoft.Xna.Framework
 
         private void Init()
         {
-            // default
-            mHolder = Holder;
-            // Add callback to get the SurfaceCreated etc events
-            mHolder.AddCallback(this);
-            mHolder.SetType(SurfaceType.Gpu);
+            // Holder.SetType is deprecated. this is ignored, this value is set automatically when needed.
+            if(Android.OS.Build.VERSION.SdkInt < Android.OS.BuildVersionCodes.Honeycomb)
+                Holder.SetType(SurfaceType.Gpu);
         }
 
-        public void SurfaceChanged(ISurfaceHolder holder, global::Android.Graphics.Format format, int width, int height)
+        public override void SurfaceChanged(ISurfaceHolder holder, global::Android.Graphics.Format format, int width, int height)
         {
             // Set flag to recreate gl surface or rendering can be bad on orienation change or if app 
             // is closed in one orientation and re-opened in another.
@@ -107,22 +104,28 @@ namespace Microsoft.Xna.Framework
                 }
 
             }
+            
+            base.SurfaceChanged(holder, format, width, height);
         }
 
-        public void SurfaceCreated(ISurfaceHolder holder)
+        public override void SurfaceCreated(ISurfaceHolder holder)
         {
             lock (_lockObject)
             {
                 androidSurfaceAvailable = true;
             }
+
+            base.SurfaceCreated(holder);
         }
 
-        public void SurfaceDestroyed(ISurfaceHolder holder)
+        public override void SurfaceDestroyed(ISurfaceHolder holder)
         {
             lock (_lockObject)
             {
                 androidSurfaceAvailable = false;
             }
+
+            base.SurfaceDestroyed(holder);
         }
 
         public bool OnTouch(View v, MotionEvent e)
@@ -1179,6 +1182,36 @@ namespace Microsoft.Xna.Framework
         {
             return new BackgroundContext(this);
         }
+
+
+        #region CardboardView.IRenderer 
+        void IRenderer.OnDrawFrame(Google.VRToolkit.Cardboard.HeadTransform headTransform, Google.VRToolkit.Cardboard.EyeParams eyeParams1, Google.VRToolkit.Cardboard.EyeParams eyeParams2)
+        {            
+            // Cardboard: test drawing
+            //gl.GlClearColor(0.1f, 0.3f, 0.8f, 0.5f);
+            Android.Opengl.GLES20.GlClearColor(0.1f, 0.3f, 0.8f, 0.5f);
+        }
+
+        void IRenderer.OnFinishFrame(Google.VRToolkit.Cardboard.Viewport viewport)
+        {
+            
+        }
+
+        void IRenderer.OnRendererShutdown()
+        {
+            
+        }
+
+        void IRenderer.OnSurfaceChanged(int width, int height)
+        {
+            
+        }
+
+        void IRenderer.OnSurfaceCreated(EGLConfig config)
+        {
+            
+        }
+        #endregion CardboardView.IRenderer
 
         public class BackgroundContext
         {
