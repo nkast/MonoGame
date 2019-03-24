@@ -568,7 +568,12 @@
     <Compile Include="Utilities\GraphicsBackend.cs" />
     <Compile Include="Resources\Resource.Designer.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="Platform\Cardboard\GoogleCardboard\GoogleCardboard.csproj">
+      <Project>{9d3687f8-435f-4ae2-94e0-1169bdec04be}</Project>
+      <Name>GoogleCardboard</Name>
+    </ProjectReference>
+  </ItemGroup>
   <ItemGroup />
   <ItemGroup>
     <EmbeddedResource Include="Platform\Graphics\Effect\Resources\AlphaTestEffect.ogl.mgfxo" />
