@@ -134,6 +134,7 @@ namespace Microsoft.Xna.Framework
             return true;
         }
 
+        /* Cardboard: 
         public virtual void SwapBuffers()
         {
             EnsureUndisposed();
@@ -148,10 +149,15 @@ namespace Microsoft.Xna.Framework
             }
 
         }
+        */
 
         public virtual void MakeCurrent()
         {
             EnsureUndisposed();
+
+            // Cardboard: 
+            return;
+
             if (!egl.EglMakeCurrent(eglDisplay, eglSurface,
                     eglSurface, eglContext))
             {
@@ -938,12 +944,14 @@ namespace Microsoft.Xna.Framework
                     // If there is an existing surface, destroy the old one
                     DestroyGLSurface();
 
+                    /* Cardboard: Surface was created by GLSurfaceView.
                     eglSurface = egl.EglCreateWindowSurface(eglDisplay, eglConfig, (Java.Lang.Object)this.Holder, null);
                     if (eglSurface == null || eglSurface == EGL10.EglNoSurface)
                         throw new Exception("Could not create EGL window surface" + GetErrorAsString());
 
                     if (!egl.EglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext))
                         throw new Exception("Could not make EGL current" + GetErrorAsString());
+                    */
 
                     glSurfaceAvailable = true;
 

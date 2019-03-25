@@ -174,7 +174,7 @@ namespace Microsoft.Xna.Framework
                 if (device != null)
                     device.Present();
 
-                _gameWindow.GameView.SwapBuffers();
+                // Cardboard: _gameWindow.GameView.SwapBuffers();
             }
             catch (Exception ex)
             {
