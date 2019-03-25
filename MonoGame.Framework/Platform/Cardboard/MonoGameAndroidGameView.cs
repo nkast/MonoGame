@@ -40,6 +40,8 @@ namespace Microsoft.Xna.Framework
         bool disposed = false;
         System.Drawing.Size size;
 
+        volatile bool _isRunCalled = false;
+
         object _lockObject = new object();
 
         volatile InternalState _internalState = InternalState.Exited_GameThread;
@@ -180,9 +182,37 @@ namespace Microsoft.Xna.Framework
 
         public bool LogFPS { get; set; }
 
+
+
         public virtual void Run()
         {
-            Run(0.0);
+            //Run(0.0);
+            _isRunCalled = true;
+            
+        }
+        
+        bool _isGameInitialized = false;
+        private bool InitializeGame()
+        {
+            if (!_isRunCalled)
+                return false;
+
+            if (!_isGameInitialized)
+            {                
+                // load GL
+                MonoGame.OpenGL.GL.LoadEntryPoints();
+                
+                // create GraphicsDevice and call Game.Initialize()
+                this._game.DoInitialize();
+                
+                // call Game.BeginRun()
+                // ?
+
+                _isGameInitialized = true;
+            }
+
+
+            return true;
         }
 
         public virtual void Run(double updatesPerSecond)
@@ -247,6 +277,33 @@ namespace Microsoft.Xna.Framework
             }
             
             return;
+        }
+
+
+        private void RunOnDrawFrame()
+        {
+            if (cts == null)
+            {
+                cts = new CancellationTokenSource();
+            }
+
+            if (!cts.IsCancellationRequested)
+            {
+                try
+                {
+                    // tick
+                    RunIteration(cts.Token);
+                }
+                catch(Exception ex)
+                {
+
+                }
+            }
+            else
+            {
+
+            }
+
         }
 
         public virtual void Pause()
@@ -1193,15 +1250,50 @@ namespace Microsoft.Xna.Framework
 
 
         #region CardboardView.IRenderer 
+        float d =0;
         void IRenderer.OnDrawFrame(Google.VRToolkit.Cardboard.HeadTransform headTransform, Google.VRToolkit.Cardboard.EyeParams eyeParams1, Google.VRToolkit.Cardboard.EyeParams eyeParams2)
-        {            
+        {         
+            if (!InitializeGame())
+                return;
+   
             // Cardboard: test drawing
-            //gl.GlClearColor(0.1f, 0.3f, 0.8f, 0.5f);
-            Android.Opengl.GLES20.GlClearColor(0.1f, 0.3f, 0.8f, 0.5f);
+            //Android.Opengl.GLES20.GlClearDepthf(0);                        
+            //Android.Opengl.GLES20.GlClearColor(68/255f, 34/255f, 136/255f, 255/255f);
+            //Android.Opengl.GLES20.GlClear(Android.Opengl.GLES20.GlColorBufferBit | Android.Opengl.GLES20.GlDepthBufferBit);
+            
+            //Android.Opengl.GLES20.GlClearColor(0.0f, g, 0.6f, 1f);
+            //Android.Opengl.GLES20.GlClear(Android.Opengl.GLES20.GlColorBufferBit | Android.Opengl.GLES20.GlDepthBufferBit);
+            d += 0.01f; if (d > 1f) d = 0.0f;
+
+
+            //Android.Opengl.GLES20.GlViewport(
+            //    eyeParams1.Viewport.X,eyeParams1.Viewport.Y,
+            //    eyeParams1.Viewport.Width,eyeParams1.Viewport.Height);
+            
+            RunOnDrawFrame();
+
+            //Android.Opengl.GLES20.GlViewport(
+            //    eyeParams2.Viewport.X,eyeParams2.Viewport.Y,
+            //    eyeParams2.Viewport.Width,eyeParams2.Viewport.Height);    
+            
+            //RunOnDrawFrame();
+
+
+
         }
 
         void IRenderer.OnFinishFrame(Google.VRToolkit.Cardboard.Viewport viewport)
         {
+            if (!InitializeGame())
+                return;
+
+
+            //Android.Opengl.GLES20.GlClearColor(68/255f, 34/255f, 136/255f, 255/255f);
+            //Android.Opengl.GLES20.GlClear(Android.Opengl.GLES20.GlColorBufferBit | Android.Opengl.GLES20.GlDepthBufferBit);
+            //Android.Opengl.GLES20.GlViewport(
+            //     viewport.X,viewport.Y,
+            //     viewport.Width,viewport.Height);
+            //RunOnDrawFrame();
             
         }
 

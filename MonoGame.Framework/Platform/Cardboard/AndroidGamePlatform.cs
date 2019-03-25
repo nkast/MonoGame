@@ -90,10 +90,12 @@ namespace Microsoft.Xna.Framework
 
         public override bool BeforeRun()
         {
-
-            // Run it as fast as we can to allow for more response on threaded GPU resource creation
+            // User called Game.Run(). 
+            // Signal the game loop to initialize end run the Game.
             _gameWindow.GameView.Run();
 
+            // Prevent the default run loop from starting.
+            // We will run the loop from the GLSurfaceView thread.
             return false;
         }
 

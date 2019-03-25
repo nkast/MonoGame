@@ -62,12 +62,15 @@ namespace Microsoft.Xna.Framework
             GameView.RenderFrame += OnRenderFrame;
             GameView.UpdateFrame += OnUpdateFrame;
                 
+            GameView.Holder.SetFormat(Android.Graphics.Format.Rgba8888);
+            
             ((Google.VRToolkit.Cardboard.CardboardActivity)context).CardboardView = GameView;
             ((Android.App.Activity)context).SetContentView(GameView);
                     
             var surfaceRenderer = GameView as Google.VRToolkit.Cardboard.CardboardView.IRenderer;
             GameView.SetRenderer(surfaceRenderer);
-
+            //GameView.DistortionCorrectionEnabled = false;
+            //GameView.SetVRModeEnabled(false);
 
             GameView.RequestFocus();
             GameView.FocusableInTouchMode = true;
