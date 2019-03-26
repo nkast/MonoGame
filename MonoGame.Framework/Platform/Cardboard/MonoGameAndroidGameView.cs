@@ -1265,6 +1265,16 @@ namespace Microsoft.Xna.Framework
             //Android.Opengl.GLES20.GlClear(Android.Opengl.GLES20.GlColorBufferBit | Android.Opengl.GLES20.GlDepthBufferBit);
             d += 0.01f; if (d > 1f) d = 0.0f;
 
+            // If distortion correction is enabled the GL context will be set to draw into a framebuffer backed 
+            // by a texture at the time of this call. If an implementor needs to change the current framebuffer, 
+            // it must be reset back afterwards to the one obtained viaglGetIntegerv(GL_FRAMEBUFFER_BINDING, ...) 
+            // at the beginning of this call.
+            Android.Opengl.GLES20.GlGetIntegerv(Android.Opengl.GLES20.GlFramebufferBinding, parameterFramebufferBinding, 0);         
+            glFramebuffer = parameterFramebufferBinding[0];
+            if (_game.GraphicsDevice!=null)
+            {
+                _game.GraphicsDevice.glFramebuffer = glFramebuffer;
+            }
 
             //Android.Opengl.GLES20.GlViewport(
             //    eyeParams1.Viewport.X,eyeParams1.Viewport.Y,
@@ -1278,15 +1288,24 @@ namespace Microsoft.Xna.Framework
             
             //RunOnDrawFrame();
 
+            
+            Android.Opengl.GLES20.GlGetIntegerv(Android.Opengl.GLES20.GlFramebufferBinding, parameterFramebufferBinding, 1);
+            System.Diagnostics.Debug.Assert(glFramebuffer == parameterFramebufferBinding[1],
+                "framebuffer must be restored back to the one set at the beggining of CardboardView.IRenderer.OnDrawFrame()");
 
 
         }
+        internal int glFramebuffer; // the current frame buffer
+        int[] parameterFramebufferBinding = new int[3];
+        
 
         void IRenderer.OnFinishFrame(Google.VRToolkit.Cardboard.Viewport viewport)
         {
             if (!InitializeGame())
                 return;
 
+            Android.Opengl.GLES20.GlGetIntegerv(Android.Opengl.GLES20.GlFramebufferBinding, parameterFramebufferBinding, 2);
+            glFramebuffer = parameterFramebufferBinding[2];
 
             //Android.Opengl.GLES20.GlClearColor(68/255f, 34/255f, 136/255f, 255/255f);
             //Android.Opengl.GLES20.GlClear(Android.Opengl.GLES20.GlColorBufferBit | Android.Opengl.GLES20.GlDepthBufferBit);
