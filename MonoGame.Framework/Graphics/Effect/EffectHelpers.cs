@@ -74,7 +74,7 @@ namespace Microsoft.Xna.Framework.Graphics
                                                                 EffectParameter worldViewProjParam, EffectParameter fogVectorParam)
         {
             // Recompute the world+view+projection matrix?
-            if ((dirtyFlags & EffectDirtyFlags.WorldViewProj) != 0)
+            //if ((dirtyFlags & EffectDirtyFlags.WorldViewProj) != 0)
             {
                 Matrix worldViewProj;
                 
@@ -89,7 +89,7 @@ namespace Microsoft.Xna.Framework.Graphics
             if (fogEnabled)
             {
                 // Recompute the fog vector?
-                if ((dirtyFlags & (EffectDirtyFlags.Fog | EffectDirtyFlags.FogEnable)) != 0)
+                //if ((dirtyFlags & (EffectDirtyFlags.Fog | EffectDirtyFlags.FogEnable)) != 0)
                 {
                     SetFogVector(ref worldView, fogStart, fogEnd, fogVectorParam);
 
@@ -99,7 +99,7 @@ namespace Microsoft.Xna.Framework.Graphics
             else
             {
                 // When fog is disabled, make sure the fog vector is reset to zero.
-                if ((dirtyFlags & EffectDirtyFlags.FogEnable) != 0)
+                //if ((dirtyFlags & EffectDirtyFlags.FogEnable) != 0)
                 {
                     fogVectorParam.SetValue(Vector4.Zero);
 
@@ -150,7 +150,7 @@ namespace Microsoft.Xna.Framework.Graphics
                                                              EffectParameter worldParam, EffectParameter worldInverseTransposeParam, EffectParameter eyePositionParam)
         {
             // Set the world and world inverse transpose matrices.
-            if ((dirtyFlags & EffectDirtyFlags.World) != 0)
+            //if ((dirtyFlags & EffectDirtyFlags.World) != 0)
             {
                 Matrix worldTranspose;
                 Matrix worldInverseTranspose;
@@ -165,7 +165,7 @@ namespace Microsoft.Xna.Framework.Graphics
             }
 
             // Set the eye position.
-            if ((dirtyFlags & EffectDirtyFlags.EyePosition) != 0)
+            //if ((dirtyFlags & EffectDirtyFlags.EyePosition) != 0)
             {
                 Matrix viewInverse;
                 
