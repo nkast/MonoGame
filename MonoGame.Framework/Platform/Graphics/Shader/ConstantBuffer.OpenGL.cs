@@ -63,8 +63,8 @@ namespace Microsoft.Xna.Framework.Graphics
 
             // If the buffer content hasn't changed then we're
             // done... use the previously set uniform state.
-            if (!_dirty)
-                return;
+            //if (!_dirty)
+            //    return;
 
             fixed (byte* bytePtr = _buffer)
             {
