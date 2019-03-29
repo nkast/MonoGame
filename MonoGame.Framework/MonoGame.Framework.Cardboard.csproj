@@ -60,6 +60,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Platform\Cardboard\GraphicsDevice.Cardboard.cs" />
+    <Compile Include="Platform\Cardboard\Input\Cardboard\Headset.cs" />
+    <Compile Include="Platform\Cardboard\Input\Cardboard\HeadsetState.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Platform\Properties\AssemblyInfo.Cardboard.cs" />
     <Compile Include="BoundingBox.cs" />

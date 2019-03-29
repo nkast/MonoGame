@@ -1255,7 +1255,9 @@ namespace Microsoft.Xna.Framework
         {         
             if (!InitializeGame())
                 return;
-   
+
+            UpdateLocalHeadsetState(headTransform, eyeParams1, eyeParams2);
+
             // Cardboard: test drawing
             //Android.Opengl.GLES20.GlClearDepthf(0);                        
             //Android.Opengl.GLES20.GlClearColor(68/255f, 34/255f, 136/255f, 255/255f);
@@ -1277,15 +1279,19 @@ namespace Microsoft.Xna.Framework
                 _game.GraphicsDevice.PlatformInvalidateDeviceContext();
             }
 
-            //Android.Opengl.GLES20.GlViewport(
-            //    eyeParams1.Viewport.X,eyeParams1.Viewport.Y,
-            //    eyeParams1.Viewport.Width,eyeParams1.Viewport.Height);
+            // preset viewport to left eye.
+            if (_game.GraphicsDevice != null)
+            {
+                _game.GraphicsDevice.Viewport = _hsState.LeftEye.Viewport;
+            }
             
             RunOnDrawFrame();
 
-            //Android.Opengl.GLES20.GlViewport(
-            //    eyeParams2.Viewport.X,eyeParams2.Viewport.Y,
-            //    eyeParams2.Viewport.Width,eyeParams2.Viewport.Height);    
+            // preset viewport to right eye.
+            //if (_game.GraphicsDevice!=null)
+            //{
+            //    _game.GraphicsDevice.Viewport = _hsState.RightEye.Viewport;
+            //}
             
             //RunOnDrawFrame();
 
@@ -1331,6 +1337,65 @@ namespace Microsoft.Xna.Framework
         {
             
         }
+
+
+        Input.Cardboard.HeadsetState _hsState;
+        internal void UpdateLocalHeadsetState(Google.VRToolkit.Cardboard.HeadTransform headTransform, Google.VRToolkit.Cardboard.EyeParams eyeParams1, Google.VRToolkit.Cardboard.EyeParams eyeParams2)
+        {
+            Viewport2XNA(eyeParams1.Viewport, ref _hsState.LeftEye.Viewport);
+            Matrix2XNA(eyeParams1.Transform.GetEyeView(), ref _hsState.LeftEye.View);
+            Matrix2XNA(eyeParams1.Transform.GetPerspective(), ref _hsState.LeftEye.Projection);
+
+            if (eyeParams2 == null)
+            {
+                _hsState.RightEye.Viewport = new Microsoft.Xna.Framework.Graphics.Viewport();
+                _hsState.RightEye.View = Microsoft.Xna.Framework.Matrix.Identity;
+                _hsState.RightEye.Projection = Microsoft.Xna.Framework.Matrix.Identity;
+            }
+            else
+            {
+                Viewport2XNA(eyeParams2.Viewport, ref _hsState.RightEye.Viewport);
+                Matrix2XNA(eyeParams2.Transform.GetEyeView(), ref _hsState.RightEye.View);
+                Matrix2XNA(eyeParams2.Transform.GetPerspective(), ref _hsState.RightEye.Projection);
+            }
+        }
+        
+        private void Viewport2XNA(Google.VRToolkit.Cardboard.Viewport viewport, ref Microsoft.Xna.Framework.Graphics.Viewport result)
+        {
+            result.X = viewport.X;
+            result.Y = viewport.Y;
+            result.Width = viewport.Width;
+            result.Height = viewport.Height;
+            result.MinDepth = 0f;
+            result.MaxDepth = 1f;
+        }
+
+        private void Matrix2XNA(float[] matrix, ref Microsoft.Xna.Framework.Matrix result)
+        {
+            result.M11 = matrix[0];
+            result.M12 = matrix[1];
+            result.M13 = matrix[2];
+            result.M14 = matrix[3];
+            result.M21 = matrix[4];
+            result.M22 = matrix[5];
+            result.M23 = matrix[6];
+            result.M24 = matrix[7];
+            result.M31 = matrix[8];
+            result.M32 = matrix[9];
+            result.M33 = matrix[10];
+            result.M34 = matrix[11];
+            result.M41 = matrix[12];
+            result.M42 = matrix[13];
+            result.M43 = matrix[14];
+            result.M44 = matrix[15];
+        }
+        
+        internal void UpdateHeadsetState(out Input.Cardboard.HeadsetState state)
+        {
+            state = _hsState;
+        }
+        
+
         #endregion CardboardView.IRenderer
 
         public class BackgroundContext

@@ -61,6 +61,8 @@ namespace Microsoft.Xna.Framework
             GameView = new MonoGameAndroidGameView(context, this, _game);
             GameView.RenderFrame += OnRenderFrame;
             GameView.UpdateFrame += OnUpdateFrame;
+
+            Input.Cardboard.Headset.View = GameView;
                 
             GameView.Holder.SetFormat(Android.Graphics.Format.Rgba8888);
             
