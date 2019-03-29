@@ -1274,6 +1274,7 @@ namespace Microsoft.Xna.Framework
             if (_game.GraphicsDevice!=null)
             {
                 _game.GraphicsDevice.glFramebuffer = glFramebuffer;
+                _game.GraphicsDevice.PlatformInvalidateDeviceContext();
             }
 
             //Android.Opengl.GLES20.GlViewport(
