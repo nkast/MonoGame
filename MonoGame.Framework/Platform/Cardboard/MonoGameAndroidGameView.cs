@@ -1277,6 +1277,8 @@ namespace Microsoft.Xna.Framework
             {
                 _game.GraphicsDevice.glFramebuffer = glFramebuffer;
                 _game.GraphicsDevice.PlatformInvalidateDeviceContext();
+
+                CheckrenderBufferSize();
             }
 
             // preset viewport to left eye.
@@ -1305,6 +1307,70 @@ namespace Microsoft.Xna.Framework
         internal int glFramebuffer; // the current frame buffer
         int[] parameterFramebufferBinding = new int[3];
         
+        private void CheckrenderBufferSize()
+        {
+            var device = _game.GraphicsDevice;
+       
+            int[] renderbufferParameters = new  int[2];
+            
+            int renderBufferWidth  = 0;
+            int renderBufferheight = 0;
+
+             MonoGame.OpenGL.GL.BindFramebuffer(MonoGame.OpenGL.FramebufferTarget.Framebuffer, glFramebuffer);
+             GraphicsExtensions.CheckGLError();
+             MonoGame.OpenGL.GL.BindRenderbuffer(MonoGame.OpenGL.RenderbufferTarget.Renderbuffer, glFramebuffer);
+             GraphicsExtensions.CheckGLError();
+               
+            
+            Android.Opengl.GLES20.GlGetRenderbufferParameteriv(
+                (int)MonoGame.OpenGL.RenderbufferTarget.Renderbuffer,
+                Android.Opengl.GLES20.GlRenderbufferWidth,
+                renderbufferParameters, 0  
+                );
+            Android.Opengl.GLES20.GlGetRenderbufferParameteriv(
+                (int)MonoGame.OpenGL.RenderbufferTarget.Renderbuffer,
+                Android.Opengl.GLES20.GlRenderbufferHeight,
+                renderbufferParameters, 1  
+                );
+                
+            renderBufferWidth = renderbufferParameters[0];
+            renderBufferheight = renderbufferParameters[1];
+            
+            renderbufferParameters = new  int[10];            
+            Android.Opengl.GLES20.GlGetRenderbufferParameteriv(
+                (int)MonoGame.OpenGL.RenderbufferTarget.Renderbuffer,
+                Android.Opengl.GLES20.GlRenderbufferInternalFormat,
+                renderbufferParameters, 0  
+                );
+            int internalFormat = renderbufferParameters[0];
+
+            renderbufferParameters = new  int[10];            
+            Android.Opengl.GLES20.GlGetRenderbufferParameteriv(
+                (int)MonoGame.OpenGL.RenderbufferTarget.Renderbuffer,
+                Android.Opengl.GLES20.GlRenderbufferRedSize,
+                renderbufferParameters, 0  
+                );
+            int redSize = renderbufferParameters[0];
+
+            renderbufferParameters = new  int[10];            
+            Android.Opengl.GLES20.GlGetRenderbufferParameteriv(
+                (int)MonoGame.OpenGL.RenderbufferTarget.Renderbuffer,
+                Android.Opengl.GLES20.GlRenderbufferDepthSize,
+                renderbufferParameters, 0  
+                );
+            int depthSize = renderbufferParameters[0];
+                        
+            renderbufferParameters = new  int[10];            
+            Android.Opengl.GLES20.GlGetRenderbufferParameteriv(
+                (int)MonoGame.OpenGL.RenderbufferTarget.Renderbuffer,
+                Android.Opengl.GLES20.GlRenderbufferStencilSize,
+                renderbufferParameters, 0  
+                );
+            int stencilSize = renderbufferParameters[0];
+
+            return;
+        }
+
 
         void IRenderer.OnFinishFrame(Google.VRToolkit.Cardboard.Viewport viewport)
         {
