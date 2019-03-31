@@ -59,7 +59,7 @@ namespace Microsoft.Xna.Framework
         CancellationTokenSource cts = null;
         private readonly AndroidTouchEventManager _touchManager;
         private readonly AndroidGameWindow _gameWindow;
-        private readonly Game _game;
+        internal readonly Game _game;
 
         // Events that are triggered on the game thread
         public static event EventHandler OnPauseGameThread;
@@ -1284,14 +1284,22 @@ namespace Microsoft.Xna.Framework
             // preset viewport to left eye.
             if (_game.GraphicsDevice != null)
             {
+                _game.GraphicsDevice.PlatformApplyStagingRenderTarget();
                 _game.GraphicsDevice.Viewport = _hsState.LeftEye.Viewport;
             }
             
             RunOnDrawFrame();
 
+            if (_game.GraphicsDevice != null)
+            {
+                // restore renderer framebuffer and draw staging
+                _game.GraphicsDevice.PlatformRenderStagingRenderTarget(glFramebuffer, 1152,667);
+            }
+
             // preset viewport to right eye.
             //if (_game.GraphicsDevice!=null)
             //{
+            //    _game.GraphicsDevice.PlatformApplyStagingRenderTarget();
             //    _game.GraphicsDevice.Viewport = _hsState.RightEye.Viewport;
             //}
             

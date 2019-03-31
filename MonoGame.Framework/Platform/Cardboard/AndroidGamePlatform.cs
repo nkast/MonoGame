@@ -67,6 +67,8 @@ namespace Microsoft.Xna.Framework
 
         public override bool BeforeDraw(GameTime gameTime)
         {
+            _gameWindow.GameView._game.GraphicsDevice.PlatformBeforeDraw();
+            
             PrimaryThreadLoader.DoLoads();
             return !IsPlayingVdeo;
         }
@@ -174,7 +176,16 @@ namespace Microsoft.Xna.Framework
             {
                 var device = Game.GraphicsDevice;
                 if (device != null)
-                    device.Present();
+                {
+                    //device.Present();
+
+                    // We cannot present with a RT set on the device.
+                    //if (this.Game.GraphicsDevice._currentRenderTargetCount != 0)
+                    //    throw new InvalidOperationException("Cannot call Present when a render target is active.");
+
+                    //_graphicsMetrics = new GraphicsMetrics();
+                    Game.GraphicsDevice.PlatformPresent();
+                }
 
                 // Cardboard: _gameWindow.GameView.SwapBuffers();
             }
