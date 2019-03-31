@@ -354,6 +354,10 @@ namespace Microsoft.Xna.Framework.Graphics
             _bufferBindingInfos = new BufferBindingInfo[_maxVertexBufferSlots];
             for (int i = 0; i < _bufferBindingInfos.Length; i++)
                 _bufferBindingInfos[i] = new BufferBindingInfo(null, IntPtr.Zero, 0, -1);
+
+#if CARDBOARD
+            PlatformCardboardInitialize();
+#endif
         }
         
         private DepthStencilState clearDepthStencilState = new DepthStencilState { StencilEnable = true };
@@ -573,6 +577,10 @@ namespace Microsoft.Xna.Framework.Graphics
 
         private void PlatformApplyDefaultRenderTarget()
         {
+#if CARDBOARD
+            if (PlatformCardboardApplyDefaultRenderTarget())
+                return;
+#endif
             this.framebufferHelper.BindFramebuffer(this.glFramebuffer);
 
             // Reset the raster state because we flip vertices
