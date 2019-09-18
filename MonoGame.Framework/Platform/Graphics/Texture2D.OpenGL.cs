@@ -197,29 +197,45 @@ namespace Microsoft.Xna.Framework.Graphics
         private void PlatformSetData<T>(int level, T[] data, int startIndex, int elementCount)
             where T : struct
         {
-            Threading.BlockOnUIThread(SetDataState<T>.Action, new SetDataState<T>
+            if (!Threading.IsOnUIThread())
             {
-                texture = this,
-                level = level,
-                data = data,
-                startIndex = startIndex,
-                elementCount = elementCount
-            });
+                Threading.BlockOnUIThread(SetDataState<T>.Action, new SetDataState<T>
+                {
+                    texture = this,
+                    level = level,
+                    data = data,
+                    startIndex = startIndex,
+                    elementCount = elementCount
+                });
+                return;
+            }
+
+            Threading.EnsureUIThread();
+
+            PlatformSetDataBody(level, data, startIndex, elementCount);
         }
 
         private void PlatformSetData<T>(int level, int arraySlice, Rectangle rect, T[] data, int startIndex, int elementCount)
             where T : struct
         {
-            Threading.BlockOnUIThread(SetDataRectState<T>.Action, new SetDataRectState<T>
+            if (!Threading.IsOnUIThread())
             {
-                texture = this,
-                level = level,
-                arraySlice = arraySlice,
-                rect = rect,
-                data = data,
-                startIndex = startIndex,
-                elementCount = elementCount
-            });
+                Threading.BlockOnUIThread(SetDataRectState<T>.Action, new SetDataRectState<T>
+                {
+                    texture = this,
+                    level = level,
+                    arraySlice = arraySlice,
+                    rect = rect,
+                    data = data,
+                    startIndex = startIndex,
+                    elementCount = elementCount
+                });
+                return;
+            }
+
+            Threading.EnsureUIThread();
+
+            PlatformSetDataBody(level, arraySlice, rect, data, startIndex, elementCount);
         }
 
         private void PlatformGetData<T>(int level, int arraySlice, Rectangle rect, T[] data, int startIndex, int elementCount)

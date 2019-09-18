@@ -51,7 +51,9 @@ namespace Microsoft.Xna.Framework.Graphics
             // http://www.khronos.org/registry/gles/extensions/OES/OES_mapbuffer.txt
             throw new NotSupportedException("Vertex buffers are write-only on OpenGL ES platforms");
 #else
-            Threading.BlockOnUIThread(() => GetBufferData(offsetInBytes, data, startIndex, elementCount, vertexStride));
+            Threading.EnsureUIThread();
+
+            GetBufferData(offsetInBytes, data, startIndex, elementCount, vertexStride);
 #endif
         }
 
@@ -109,18 +111,26 @@ namespace Microsoft.Xna.Framework.Graphics
             int offsetInBytes, T[] data, int startIndex, int elementCount, int vertexStride, SetDataOptions options, int bufferSize, int elementSizeInBytes)
             where T : struct
         {
-            Threading.BlockOnUIThread(SetDataState<T>.Action, new SetDataState<T>
+            if (!Threading.IsOnUIThread())
             {
-                buffer = this,
-                offsetInBytes = offsetInBytes,
-                data = data,
-                startIndex = startIndex,
-                elementCount = elementCount,
-                vertexStride = vertexStride,
-                options = options,
-                bufferSize = bufferSize,
-                elementSizeInBytes = elementSizeInBytes
-            });
+                Threading.BlockOnUIThread(SetDataState<T>.Action, new SetDataState<T>
+                {
+                    buffer = this,
+                    offsetInBytes = offsetInBytes,
+                    data = data,
+                    startIndex = startIndex,
+                    elementCount = elementCount,
+                    vertexStride = vertexStride,
+                    options = options,
+                    bufferSize = bufferSize,
+                    elementSizeInBytes = elementSizeInBytes
+                });
+                return;
+            }
+
+            Threading.EnsureUIThread();
+
+            PlatformSetDataBody(offsetInBytes, data, startIndex, elementCount, vertexStride, options, bufferSize, elementSizeInBytes);
         }
 
         private void PlatformSetDataBody<T>(

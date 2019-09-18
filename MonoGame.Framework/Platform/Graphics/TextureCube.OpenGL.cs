@@ -153,10 +153,21 @@ namespace Microsoft.Xna.Framework.Graphics
             throw new NotImplementedException();
 #endif
         }
+        private void PlatformSetDataAction<T>(CubeMapFace face, int level, Rectangle rect, T[] data, int startIndex, int elementCount)
+        {
+            Threading.BlockOnUIThread(() => PlatformSetData(face, level, rect, data, startIndex, elementCount));
+        }
 
         private void PlatformSetData<T>(CubeMapFace face, int level, Rectangle rect, T[] data, int startIndex, int elementCount)
         {
-            Threading.BlockOnUIThread(() =>
+            if (!Threading.IsOnUIThread())
+            {
+                PlatformSetDataAction(face, level, rect, data, startIndex, elementCount);
+                return;
+            }
+
+            Threading.EnsureUIThread();
+
             {
                 var elementSizeInByte = ReflectionHelpers.SizeOf<T>.Get();
                 var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
@@ -188,7 +199,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 {
                     dataHandle.Free();
                 }
-            });
+            }
         }
 
         private TextureTarget GetGLCubeFace(CubeMapFace face)
