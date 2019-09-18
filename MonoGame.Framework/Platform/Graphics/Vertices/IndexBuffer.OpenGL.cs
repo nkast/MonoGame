@@ -51,18 +51,14 @@ namespace Microsoft.Xna.Framework.Graphics
             // http://www.khronos.org/registry/gles/extensions/OES/OES_mapbuffer.txt
             throw new NotSupportedException("Index buffers are write-only on OpenGL ES platforms");
 #else
-            if (Threading.IsOnUIThread())
-            {
-                GetBufferData(offsetInBytes, data, startIndex, elementCount);
-            }
-            else
-            {
-                Threading.BlockOnUIThread(() => GetBufferData(offsetInBytes, data, startIndex, elementCount));
-            }
+            Threading.EnsureUIThread();
+
+            GetBufferData(offsetInBytes, data, startIndex, elementCount);
 #endif
         }
 
 #if !GLES
+
         private void GetBufferData<T>(int offsetInBytes, T[] data, int startIndex, int elementCount) where T : struct
         {
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, ibo);
@@ -95,15 +91,23 @@ namespace Microsoft.Xna.Framework.Graphics
         private void PlatformSetData<T>(int offsetInBytes, T[] data, int startIndex, int elementCount, SetDataOptions options)
             where T : struct
         {
-            Threading.BlockOnUIThread(SetDataState<T>.Action, new SetDataState<T>
+            if (!Threading.IsOnUIThread())
             {
-                buffer = this,
-                offsetInBytes = offsetInBytes,
-                data = data,
-                startIndex = startIndex,
-                elementCount = elementCount,
-                options = options
-            });
+                Threading.BlockOnUIThread(SetDataState<T>.Action, new SetDataState<T>
+                {
+                    buffer = this,
+                    offsetInBytes = offsetInBytes,
+                    data = data,
+                    startIndex = startIndex,
+                    elementCount = elementCount,
+                    options = options
+                });
+                return;
+            }
+
+            Threading.EnsureUIThread();
+
+            PlatformSetDataBody(offsetInBytes, data, startIndex, elementCount, options);
         }
 
         private void PlatformSetDataBody<T>(int offsetInBytes, T[] data, int startIndex, int elementCount, SetDataOptions options) where T : struct

@@ -38,6 +38,14 @@ namespace Microsoft.Xna.Framework.Graphics
 #endif
         }
 
+        private void PlatformSetDataAction<T>(
+            int level,
+            int left, int top, int right, int bottom, int front, int back,
+            T[] data, int startIndex, int elementCount, int width, int height, int depth)
+        {
+            Threading.BlockOnUIThread(() => PlatformSetData(level, left, top, right, bottom, front, back, data, startIndex, elementCount, width, height, depth));
+        }
+
         private void PlatformSetData<T>(
             int level,
             int left, int top, int right, int bottom, int front, int back,
@@ -46,7 +54,14 @@ namespace Microsoft.Xna.Framework.Graphics
 #if GLES
             throw new NotSupportedException("OpenGL ES 2.0 doesn't support 3D textures.");
 #else
-            Threading.BlockOnUIThread(() =>
+            if (!Threading.IsOnUIThread())
+            {
+                PlatformSetDataAction(level, left, top, right, bottom, front, back,data, startIndex, elementCount, width, height, depth);
+                return;
+            }
+
+            Threading.EnsureUIThread();
+
             {
                 var elementSizeInByte = Marshal.SizeOf<T>();
                 var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
@@ -64,7 +79,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 {
                     dataHandle.Free();
                 }
-            });
+            }
 #endif
         }
 
