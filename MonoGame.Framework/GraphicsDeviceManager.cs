@@ -193,7 +193,8 @@ namespace Microsoft.Xna.Framework
         /// Raises the <see cref="DeviceResetting"/> event.
         /// </summary>
         /// <param name="e"></param>
-        protected void OnDeviceResetting(EventArgs e)
+        // TODO these should be made protected, but currently WP calls these in SurfaceUpdateHandler
+        internal void OnDeviceResetting(EventArgs e)
         {
             EventHelpers.Raise(this, DeviceResetting, e);
         }
@@ -320,6 +321,10 @@ namespace Microsoft.Xna.Framework
         /// </summary>
         public void ApplyChanges()
         {
+ #if (W81 || WP81)
+            if (_graphicsDevice == null)
+                return;
+#endif
 #if WINDOWS_UAP
             if (_graphicsDevice == null)
                 return;
@@ -627,5 +632,13 @@ namespace Microsoft.Xna.Framework
                 _supportedOrientations = value;
             }
         }
+
+#if WP8
+        internal void InternalOnDeviceReset(EventArgs e)
+        {
+            this.OnDeviceReset(e);
+        }
+#endif
+
     }
 }

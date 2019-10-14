@@ -64,7 +64,7 @@ namespace Microsoft.Xna.Platform.Audio
             {
                 if (Device == null)
                 {
-#if DEBUG && !(WINDOWS_UAP)
+#if DEBUG && !(WINDOWS_UAP || WINRT)
                     try
                     {
                         //Fails if the XAudio2 SDK is not installed
@@ -80,7 +80,7 @@ namespace Microsoft.Xna.Platform.Audio
                 }
 
                 // Just use the default device.
-#if (WINDOWS_UAP)
+#if (WINDOWS_UAP || WINRT)
                 string deviceId = null;
 #else
                 const int deviceId = 0;
@@ -93,7 +93,7 @@ namespace Microsoft.Xna.Platform.Audio
                 }
 
                 // The autodetected value of MasterVoice.ChannelMask corresponds to the speaker layout.
-#if (WINDOWS_UAP)
+#if (WINDOWS_UAP || WINRT)
                 Speakers = (Speakers)MasterVoice.ChannelMask;
 #else
                 Speakers = Device.Version == XAudio2Version.Version27
@@ -138,7 +138,11 @@ namespace Microsoft.Xna.Platform.Audio
                     var details = MasterVoice.VoiceDetails;
                     _reverbVoice = new SubmixVoice(Device, details.InputChannelCount, details.InputSampleRate);
 
+#if SHARPDX263
+                    var reverb = new SharpDX.XAudio2.Fx.Reverb();
+#else
                     var reverb = new SharpDX.XAudio2.Fx.Reverb(Device);
+#endif
                     var desc = new EffectDescriptor(reverb);
                     desc.InitialState = true;
                     desc.OutputChannelCount = details.InputChannelCount;

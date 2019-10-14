@@ -305,7 +305,7 @@ namespace Microsoft.Xna.Framework.Graphics
         }
         */
 
-#if DIRECTX
+#if DIRECTX && !WP8
         private static readonly Dictionary<SharpDX.DXGI.Format, SurfaceFormat> FormatTranslations = new Dictionary<SharpDX.DXGI.Format, SurfaceFormat>
             {
                 { SharpDX.DXGI.Format.R8G8B8A8_UNorm, SurfaceFormat.Color },
@@ -344,7 +344,7 @@ namespace Microsoft.Xna.Framework.Graphics
                         if (!modes.Contains(displayMode))
                             modes.Add(displayMode);
                     }
-#elif DIRECTX
+#elif DIRECTX && !WP8
                     var dxgiFactory = new SharpDX.DXGI.Factory1();
                     var adapter = dxgiFactory.GetAdapter(0);
                     var output = adapter.Outputs[0];
