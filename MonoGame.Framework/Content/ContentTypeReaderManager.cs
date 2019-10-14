@@ -101,6 +101,8 @@ namespace Microsoft.Xna.Framework.Content
                 // on all platforms... Allow it to compile anyway.
 #if ANDROID || (IOS && !TVOS) || MONOMAC || (WINDOWS && !OPENGL) || WINDOWS_UAP
                 var hVideoReader = new VideoReader();
+#elif ((WINRT) && !WP8)
+                var hVideoReader = new VideoReader();
 #endif
             }
 #pragma warning restore 0219, 0649
