@@ -48,7 +48,23 @@ namespace Microsoft.Xna.Framework.Input
                 return new GamePadCapabilities();
             }
 
-            var capabilities = controller.GetCapabilities(SharpDX.XInput.DeviceQueryType.Any);
+            SharpDX.XInput.Capabilities capabilities;
+            try
+            {
+                capabilities = controller.GetCapabilities(SharpDX.XInput.DeviceQueryType.Any);
+            }
+            catch (SharpDX.SharpDXException ex)
+            {                
+                const int DeviceNotConnectedHResult = unchecked((int)0x8007048f);
+                if (ex.ResultCode.Code == DeviceNotConnectedHResult)
+                {
+                    _connected[index] = false;
+                    SetDisconnectedTimeout(index);
+                    return new GamePadCapabilities();
+                }
+                throw;
+            }
+
             var ret = new GamePadCapabilities();
             switch (capabilities.SubType)
             {
