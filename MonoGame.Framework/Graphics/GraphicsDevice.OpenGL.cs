@@ -536,7 +536,7 @@ namespace Microsoft.Xna.Framework.Graphics
         }
 #endif
 
-        private void PlatformPresent()
+        internal void PlatformPresent()
         {
 #if DESKTOPGL || ANGLE
             Context.SwapBuffers();
