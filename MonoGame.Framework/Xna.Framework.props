@@ -19,7 +19,6 @@
     <Compile Include="CurveLoopType.cs" />
     <Compile Include="CurveTangent.cs" />    
     <Compile Include="FrameworkDispatcher.cs" />
-    <Compile Include="GameServiceContainer.cs" />
     <Compile Include="GameTime.cs" />
     <Compile Include="ICurveEvaluator.cs" />
     <Compile Include="MathHelper.cs" />
