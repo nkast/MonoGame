@@ -17,8 +17,10 @@ namespace Microsoft.Xna.Framework.Graphics
     public class SwapChainRenderTarget : RenderTarget2D
     {
         private SwapChain _swapChain;
+        private IntPtr _windowHandle;
+        private SharpDX.Direct3D11.Texture2D _backBuffer;
 
-        public PresentInterval PresentInterval;
+        public readonly PresentInterval PresentInterval;
 
         public SwapChainRenderTarget(   GraphicsDevice graphicsDevice,
                                         IntPtr windowHandle,
@@ -55,7 +57,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 mipMap,
                 surfaceFormat,
                 depthFormat,
-                preferredMultiSampleCount,
+                graphicsDevice.GetClampedMultisampleCount(preferredMultiSampleCount),
                 usage,
                 SurfaceType.SwapChainRenderTarget)
         {
@@ -63,57 +65,24 @@ namespace Microsoft.Xna.Framework.Graphics
                              ? SharpDX.DXGI.Format.B8G8R8A8_UNorm
                              : SharpDXHelper.ToFormat(surfaceFormat);
 
-            var multisampleDesc = new SampleDescription(1, 0);
-            if (preferredMultiSampleCount > 1)
-            {
-                multisampleDesc.Count = preferredMultiSampleCount;
-                multisampleDesc.Quality = (int)StandardMultisampleQualityLevels.StandardMultisamplePattern;
-            }
-
-            var desc = new SwapChainDescription()
-            {
-                ModeDescription =
-                {
-                    Format = dxgiFormat,
-                    Scaling = DisplayModeScaling.Stretched,
-                    Width = width,
-                    Height = height,
-                },
-
-                OutputHandle = windowHandle,
-                SampleDescription = multisampleDesc,
-                Usage = Usage.RenderTargetOutput,
-                BufferCount = 2,
-                SwapEffect = SharpDXHelper.ToSwapEffect(presentInterval),
-                IsWindowed = true,
-            };
-
+            preferredMultiSampleCount = graphicsDevice.GetClampedMultisampleCount(preferredMultiSampleCount);
+            var multisampleDesc = graphicsDevice.GetSupportedSampleDescription(dxgiFormat, preferredMultiSampleCount);
+            _windowHandle = windowHandle;
             PresentInterval = presentInterval;
+
+
+            CreateSwaipChainTexture(dxgiFormat, multisampleDesc);
 
             // Once the desired swap chain description is configured, it must 
             // be created on the same adapter as our D3D Device
             var d3dDevice = graphicsDevice._d3dDevice;
 
-            // First, retrieve the underlying DXGI Device from the D3D Device.
-            // Creates the swap chain 
-            using (var dxgiDevice = d3dDevice.QueryInterface<SharpDX.DXGI.Device1>())
-            using (var dxgiAdapter = dxgiDevice.Adapter)
-            using (var dxgiFactory = dxgiAdapter.GetParent<Factory1>())
-            {
-                _swapChain = new SwapChain(dxgiFactory, dxgiDevice, desc);
-            }
-
-            // Obtain the backbuffer for this window which will be the final 3D rendertarget.
-            var backBuffer = SharpDX.Direct3D11.Resource.FromSwapChain<SharpDX.Direct3D11.Texture2D>(_swapChain, 0);
-
             // Create a view interface on the rendertarget to use on bind.
-            _renderTargetViews = new[] { new RenderTargetView(d3dDevice, backBuffer) };
+            _renderTargetViews = new[] { new RenderTargetView(d3dDevice, _backBuffer) };
 
             // Get the rendertarget dimensions for later.
-            var backBufferDesc = backBuffer.Description;
+            var backBufferDesc = _backBuffer.Description;
             var targetSize = new Point(backBufferDesc.Width, backBufferDesc.Height);
-
-            _texture = backBuffer;
 
             // Create the depth buffer if we need it.
             if (depthFormat != DepthFormat.None)
@@ -140,6 +109,52 @@ namespace Microsoft.Xna.Framework.Graphics
             }
         }
 
+        private SharpDX.Direct3D11.Resource CreateSwaipChainTexture(SharpDX.DXGI.Format dxgiFormat, SharpDX.DXGI.SampleDescription multisampleDesc)
+        {
+            var d3dDevice = GraphicsDevice._d3dDevice;
+
+            var desc = new SwapChainDescription()
+            {
+                ModeDescription =
+                {
+                    Format = dxgiFormat,
+                    Scaling = DisplayModeScaling.Stretched,
+                    Width = width,
+                    Height = height,
+                },
+
+                OutputHandle = _windowHandle,
+                SampleDescription = multisampleDesc,
+                Usage = Usage.RenderTargetOutput,
+                BufferCount = 2,
+                SwapEffect = SharpDXHelper.ToSwapEffect(PresentInterval),
+                IsWindowed = true,
+            };
+            
+            // First, retrieve the underlying DXGI Device from the D3D Device.
+            // Creates the swap chain 
+            using (var dxgiDevice = d3dDevice.QueryInterface<SharpDX.DXGI.Device1>())
+            using (var dxgiAdapter = dxgiDevice.Adapter)
+            using (var dxgiFactory = dxgiAdapter.GetParent<Factory1>())
+            {
+                _swapChain = new SwapChain(dxgiFactory, dxgiDevice, desc);
+            }
+
+            // Obtain the backbuffer for this window which will be the final 3D rendertarget.
+            _backBuffer = SharpDX.Direct3D11.Resource.FromSwapChain<SharpDX.Direct3D11.Texture2D>(_swapChain, 0);
+
+            return _backBuffer;
+        }
+        
+        internal override SharpDX.Direct3D11.Resource CreateTexture()
+        {
+            return base.CreateTexture();
+        }
+
+        internal override void ResolveSubresource()
+        {
+            // SwapChainRenderTarget don't need to resolve the MSAA texture.
+        }
 
         // TODO: We need to expose the other Present() overloads
         // for passing source/dest rectangles.
