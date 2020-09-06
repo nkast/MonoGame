@@ -145,6 +145,9 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Graphics
 			abc.A = face.Glyph.Metrics.HorizontalBearingX >> 6;
 			abc.B = face.Glyph.Metrics.Width >> 6;
 			abc.C = (face.Glyph.Metrics.HorizontalAdvance >> 6) - (abc.A + abc.B);
+			var bitmapLeft = face.Glyph.BitmapLeft;
+			abc.A -= bitmapLeft;
+			abc.B += bitmapLeft;
 
 			// Construct the output Glyph object.
 			return new Glyph(character, glyphBitmap)
