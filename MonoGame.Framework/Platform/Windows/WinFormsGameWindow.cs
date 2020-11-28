@@ -43,6 +43,9 @@ namespace MonoGame.Framework
         // true if window position was moved either through code or by dragging/resizing the form
         private bool _wasMoved;
 
+        // true if we have previously send a Pressed or Moved emulated touch event
+        bool _wasMouseTouchPressed;
+
         private bool _isResizeTickEnabled;
         private readonly System.Timers.Timer _resizeTickTimer;
 
@@ -154,8 +157,6 @@ namespace MonoGame.Framework
 
             // Capture mouse events.
             Mouse.WindowHandle = Form.Handle;
-            Form.MouseWheel += OnMouseScroll;
-            Form.MouseHorizontalWheel += OnMouseHorizontalScroll;
             Form.MouseEnter += OnMouseEnter;
             Form.MouseLeave += OnMouseLeave;            
 
@@ -257,16 +258,6 @@ namespace MonoGame.Framework
             Keyboard.SetActive(false);
         }
 
-        private void OnMouseScroll(object sender, MouseEventArgs mouseEventArgs)
-        {
-            MouseState.ScrollWheelValue += mouseEventArgs.Delta;
-        }
-
-        private void OnMouseHorizontalScroll(object sender, HorizontalMouseWheelEventArgs mouseEventArgs)
-        {
-            MouseState.HorizontalScrollWheelValue += mouseEventArgs.Delta;
-        }
-
         private void UpdateMouseState()
         {
             // If we call the form client functions before the form has
@@ -280,43 +271,31 @@ namespace MonoGame.Framework
             MapWindowPoints(new HandleRef(null, IntPtr.Zero), new HandleRef(Form, Form.Handle), out pos, 1);
             var clientPos = new System.Drawing.Point(pos.X, pos.Y);
             var withinClient = Form.ClientRectangle.Contains(clientPos);
-            var buttons = Control.MouseButtons;
 
-            var previousState = MouseState.LeftButton;
+            // Emulate Touch with Mouse.
+            var touchX = MathHelper.Clamp(clientPos.X, 0, Form.ClientRectangle.Width - 1);
+            var touchY = MathHelper.Clamp(clientPos.Y, 0, Form.ClientRectangle.Height - 1);
 
-            MouseState.X = clientPos.X;
-            MouseState.Y = clientPos.Y;
-            MouseState.LeftButton = (buttons & MouseButtons.Left) == MouseButtons.Left ? ButtonState.Pressed : ButtonState.Released;
-            MouseState.MiddleButton = (buttons & MouseButtons.Middle) == MouseButtons.Middle ? ButtonState.Pressed : ButtonState.Released;
-            MouseState.RightButton = (buttons & MouseButtons.Right) == MouseButtons.Right ? ButtonState.Pressed : ButtonState.Released;
-            MouseState.XButton1 = (buttons & MouseButtons.XButton1) == MouseButtons.XButton1 ? ButtonState.Pressed : ButtonState.Released;
-            MouseState.XButton2 = (buttons & MouseButtons.XButton2) == MouseButtons.XButton2 ? ButtonState.Pressed : ButtonState.Released;
+            var isPressed = ((Control.MouseButtons & MouseButtons.Left) == MouseButtons.Left);
 
-            // Don't process touch state if we're not active 
-            // and the mouse is within the client area.
+            // Release touch if we're not active 
+            // or the mouse is not within the client area.
             if (!_platform.IsActive || !withinClient)
-            {                
-                if (MouseState.LeftButton == ButtonState.Pressed)
-                {
-                    // Release mouse TouchLocation
-                    var touchX = MathHelper.Clamp(MouseState.X, 0, Form.ClientRectangle.Width-1);
-                    var touchY = MathHelper.Clamp(MouseState.Y, 0, Form.ClientRectangle.Height-1);
-                    TouchPanelState.AddEvent(0, TouchLocationState.Released, new Vector2(touchX, touchY), true);
-                }
-                return;
-            }
+                isPressed = false;
             
-            TouchLocationState? touchState = null;
-            if (MouseState.LeftButton == ButtonState.Pressed)
-                if (previousState == ButtonState.Released)
+            TouchLocationState touchState = TouchLocationState.Invalid;
+            
+            if (!_wasMouseTouchPressed &&  isPressed)
                     touchState = TouchLocationState.Pressed;
-                else
+            if ( _wasMouseTouchPressed &&  isPressed)
                     touchState = TouchLocationState.Moved;
-            else if (previousState == ButtonState.Pressed)
+            if ( _wasMouseTouchPressed && !isPressed)
                 touchState = TouchLocationState.Released;
 
-            if (touchState.HasValue)
-                TouchPanelState.AddEvent(0, touchState.Value, new Vector2(MouseState.X, MouseState.Y), true);
+            _wasMouseTouchPressed = isPressed;
+                        
+            if (touchState != TouchLocationState.Invalid)
+                TouchPanelState.AddEvent(0, touchState, new Vector2(touchX, touchY), true);
         } 
 
         private void OnMouseEnter(object sender, EventArgs e)
