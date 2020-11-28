@@ -25,14 +25,11 @@ namespace Microsoft.Xna.Framework.Input
         }
 
         /// <summary>
-        /// This API is an extension to XNA.
-        /// Gets mouse state information that includes position and button
-        /// presses for the provided window
+        /// Gets if RawInput is available.
         /// </summary>
-        /// <returns>Current state of the mouse.</returns>
-        public static MouseState GetState(GameWindow window)
+        public static bool IsRawInputAvailable
         {
-            return PlatformGetState(window);
+            get { return PlatformIsRawInputAvailable(); }
         }
 
         /// <summary>
@@ -42,8 +39,12 @@ namespace Microsoft.Xna.Framework.Input
         /// <returns>Current state of the mouse.</returns>
         public static MouseState GetState()
         {
+#if (DIRECTX && (WINDOWS && !OPENGL)) // WinForms based Windows Desktop
+            return PlatformGetState();
+#endif
+
             if (PrimaryWindow != null)
-                return GetState(PrimaryWindow);
+                return PlatformGetState(PrimaryWindow);
 
             return _defaultState;
         }

@@ -20,6 +20,11 @@ namespace Microsoft.Xna.Framework.Input
         {
         }
 
+        private static bool PlatformIsRawInputAvailable()
+        {
+            return false;
+        }
+
         private static MouseState PlatformGetState(GameWindow window)
         {
             int x, y;
