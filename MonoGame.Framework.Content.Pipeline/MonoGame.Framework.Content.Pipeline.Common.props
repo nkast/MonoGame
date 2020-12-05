@@ -1,7 +1,6 @@
 <Project>
 
   <ItemGroup>
-    <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Audio\AudioContent.cs" />
     <Compile Include="Audio\AudioFileType.cs" />
     <Compile Include="Audio\AudioFormat.cs" />
@@ -10,34 +9,20 @@
     <Compile Include="Audio\ConversionFormat.cs" />
     <Compile Include="Audio\ConversionQuality.cs" />
     <Compile Include="Audio\DefaultAudioProfile.cs" />
-    <Compile Include="Builder\Convertors\StringToColorConverter.cs" />
-    <Compile Include="Builder\FileHelper.cs" />
-    <Compile Include="Builder\PathHelper.cs" />
-    <Compile Include="Builder\PipelineBuildEvent.cs" />
-    <Compile Include="Builder\PipelineBuildLogger.cs" />
-    <Compile Include="Builder\PipelineImporterContext.cs" />
-    <Compile Include="Builder\PipelineManager.cs" />
-    <Compile Include="Builder\PipelineProcessorContext.cs" />
-    <Compile Include="Builder\TypeExtensions.cs" />
-    <Compile Include="Builder\XmlColor.cs" />
-    <Compile Include="ChildCollection.cs" />
-    <Compile Include="ContentBuildLogger.cs" />
-    <Compile Include="ContentIdentity.cs" />
-    <Compile Include="ContentImporter.cs" />
-    <Compile Include="ContentImporterAttribute.cs" />
-    <Compile Include="ContentImporterContext.cs" />
-    <Compile Include="ContentItem.cs" />
-    <Compile Include="ContentProcessor.cs" />
-    <Compile Include="ContentProcessorAttribute.cs" />
-    <Compile Include="ContentProcessorContext.cs" />
-    <Compile Include="ContentStats.cs" />
-    <Compile Include="ContentStatsCollection.cs" />
-    <Compile Include="DdsLoader.cs" />
-    <Compile Include="EffectImporter.cs" />
-    <Compile Include="ExternalReference.cs" />
-    <Compile Include="ExternalTool.cs" />
-    <Compile Include="FbxImporter.cs" />
-    <Compile Include="FontDescriptionImporter.cs" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Compile Include="Graphics\Font\BitmapUtils.cs" />
+    <Compile Include="Graphics\Font\CharacterRegion.cs" />
+    <Compile Include="Graphics\Font\CharacterRegionTypeConverter.cs" />
+    <Compile Include="Graphics\Font\Glyph.cs" />
+    <Compile Include="Graphics\Font\GlyphCropper.cs" />
+    <Compile Include="Graphics\Font\GlyphPacker.cs" />
+    <Compile Include="Graphics\Font\IFontImporter.cs" />
+    <Compile Include="Graphics\Font\SharpFontImporter.cs" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <Compile Include="Graphics\AlphaTestMaterialContent.cs" />
     <Compile Include="Graphics\AnimationChannel.cs" />
     <Compile Include="Graphics\AnimationChannelDictionary.cs" />
@@ -64,14 +49,6 @@
     <Compile Include="Graphics\Etc1BitmapContent.cs" />
     <Compile Include="Graphics\FontDescription.cs" />
     <Compile Include="Graphics\FontDescriptionStyle.cs" />
-    <Compile Include="Graphics\Font\BitmapUtils.cs" />
-    <Compile Include="Graphics\Font\CharacterRegion.cs" />
-    <Compile Include="Graphics\Font\CharacterRegionTypeConverter.cs" />
-    <Compile Include="Graphics\Font\Glyph.cs" />
-    <Compile Include="Graphics\Font\GlyphCropper.cs" />
-    <Compile Include="Graphics\Font\GlyphPacker.cs" />
-    <Compile Include="Graphics\Font\IFontImporter.cs" />
-    <Compile Include="Graphics\Font\SharpFontImporter.cs" />
     <Compile Include="Graphics\GeometryContent.cs" />
     <Compile Include="Graphics\GeometryContentCollection.cs" />
     <Compile Include="Graphics\GraphicsUtil.cs" />
@@ -105,20 +82,9 @@
     <Compile Include="Graphics\VertexChannelGeneric.cs" />
     <Compile Include="Graphics\VertexChannelNames.cs" />
     <Compile Include="Graphics\VertexContent.cs" />
-    <Compile Include="H264Importer.cs" />
-    <Compile Include="IContentImporter.cs" />
-    <Compile Include="IContentProcessor.cs" />
-    <Compile Include="InvalidContentException.cs" />
-    <Compile Include="LoadedTypeCollection.cs" />
-    <Compile Include="Mp3Importer.cs" />
-    <Compile Include="NamedValueDictionary.cs" />
-    <Compile Include="OggImporter.cs" />
-    <Compile Include="OpaqueDataDictionary.cs" />
-    <Compile Include="OpenAssetImporter.cs" />
-    <Compile Include="PipelineComponentScanner.cs" />
-    <Compile Include="PipelineException.cs" />
-    <Compile Include="ProcessorParameter.cs" />
-    <Compile Include="ProcessorParameterCollection.cs" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <Compile Include="Processors\CompiledEffectContent.cs" />
     <Compile Include="Processors\EffectProcessor.cs" />
     <Compile Include="Processors\EffectProcessorDebugMode.cs" />
@@ -146,6 +112,9 @@
     <Compile Include="Processors\VertexBufferContent.cs" />
     <Compile Include="Processors\VertexDeclarationContent.cs" />
     <Compile Include="Processors\VideoProcessor.cs" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <Compile Include="Serialization\Compiler\AlphaTestEffectWriter.cs" />
     <Compile Include="Serialization\Compiler\ArrayWriter.cs" />
     <Compile Include="Serialization\Compiler\BasicEffectWriter.cs" />
@@ -208,6 +177,9 @@
     <Compile Include="Serialization\Compiler\VertexBufferWriter.cs" />
     <Compile Include="Serialization\Compiler\VertexDeclarationWriter.cs" />
     <Compile Include="Serialization\Compiler\VideoWriter.cs" />
+  </ItemGroup>  
+  
+  <ItemGroup>
     <Compile Include="Serialization\Intermediate\ArraySerializer.cs" />
     <Compile Include="Serialization\Intermediate\BoolSerializer.cs" />
     <Compile Include="Serialization\Intermediate\ByteSerializer.cs" />
@@ -251,23 +223,61 @@
     <Compile Include="Serialization\Intermediate\Vector2Serializer.cs" />
     <Compile Include="Serialization\Intermediate\Vector3Serializer.cs" />
     <Compile Include="Serialization\Intermediate\Vector4Serializer.cs" />
+  </ItemGroup>  
+  
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="ChildCollection.cs" />
+    <Compile Include="ContentBuildLogger.cs" />
+    <Compile Include="ContentIdentity.cs" />
+    <Compile Include="ContentImporter.cs" />
+    <Compile Include="ContentImporterAttribute.cs" />
+    <Compile Include="ContentImporterContext.cs" />
+    <Compile Include="ContentItem.cs" />
+    <Compile Include="ContentProcessor.cs" />
+    <Compile Include="ContentProcessorAttribute.cs" />
+    <Compile Include="ContentProcessorContext.cs" />
+    <Compile Include="DdsLoader.cs" />
+    <Compile Include="EffectImporter.cs" />
+    <Compile Include="ExternalReference.cs" />
+    <Compile Include="ExternalTool.cs" />
+    <Compile Include="FbxImporter.cs" />
+    <Compile Include="FontDescriptionImporter.cs" />
+    <Compile Include="H264Importer.cs" />
+    <Compile Include="IContentImporter.cs" />
+    <Compile Include="IContentProcessor.cs" />
+    <Compile Include="InvalidContentException.cs" />
+    <Compile Include="LoadedTypeCollection.cs" />
+    <Compile Include="Mp3Importer.cs" />
+    <Compile Include="NamedValueDictionary.cs" />
+    <Compile Include="OggImporter.cs" />
+    <Compile Include="OpaqueDataDictionary.cs" />
+    <Compile Include="OpenAssetImporter.cs" />
+    <Compile Include="PipelineComponentScanner.cs" />
+    <Compile Include="PipelineException.cs" />
+    <Compile Include="ProcessorParameter.cs" />
+    <Compile Include="ProcessorParameterCollection.cs" />
     <Compile Include="TargetPlatform.cs" />
     <Compile Include="TextureImporter.cs" />
-    <Compile Include="Utilities\FreeImageAPI.cs" />
-    <Compile Include="Utilities\FreeImageAPIC.cs" />
-    <Compile Include="Utilities\LZ4\LZ4Codec.cs" />
-    <Compile Include="Utilities\LZ4\LZ4Codec.Unsafe.cs" />
-    <Compile Include="Utilities\LZ4\LZ4Codec.Unsafe32.Dirty.cs" />
-    <Compile Include="Utilities\LZ4\LZ4Codec.Unsafe32HC.Dirty.cs" />
-    <Compile Include="Utilities\LZ4\LZ4Codec.Unsafe64.Dirty.cs" />
-    <Compile Include="Utilities\LZ4\LZ4Codec.Unsafe64HC.Dirty.cs" />
-    <Compile Include="Utilities\Vector4Converter.cs" />
     <Compile Include="VideoContent.cs" />
     <Compile Include="WavImporter.cs" />
     <Compile Include="WmaImporter.cs" />
     <Compile Include="WmvImporter.cs" />
     <Compile Include="XImporter.cs" />
     <Compile Include="XmlImporter.cs" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Compile Include="Utilities\LZ4\LZ4Codec.cs" />
+    <Compile Include="Utilities\LZ4\LZ4Codec.Unsafe.cs" />
+    <Compile Include="Utilities\LZ4\LZ4Codec.Unsafe32.Dirty.cs" />
+    <Compile Include="Utilities\LZ4\LZ4Codec.Unsafe32HC.Dirty.cs" />
+    <Compile Include="Utilities\LZ4\LZ4Codec.Unsafe64.Dirty.cs" />
+    <Compile Include="Utilities\LZ4\LZ4Codec.Unsafe64HC.Dirty.cs" />
+    <Compile Include="Utilities\FreeImageAPI.cs" />
+    <Compile Include="Utilities\FreeImageAPIC.cs" />
+    <Compile Include="Utilities\PathHelper.cs" />
+    <Compile Include="Utilities\Vector4Converter.cs" />
   </ItemGroup>
   
 </Project>
