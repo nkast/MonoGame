@@ -44,7 +44,8 @@
     <Compile Include="Platform\Graphics\GraphicsAdapter.Legacy.cs" />
     <Compile Include="Platform\Graphics\OpenGL.Android.cs" />
     <Compile Include="Platform\Graphics\OpenGL.Common.cs" />
-    <Compile Include="Platform\Graphics\Texture2D.StbSharp.cs" />
+    <Compile Include="Platform\Graphics\Texture2D.Stream.OpenGL.cs" />
+    <Compile Include="Platform\Graphics\Texture2D.FromStream.GL.cs" />
     <Compile Include="Platform\GraphicsDeviceManager.Legacy.cs" />
     <Compile Include="Platform\Input\GamePad.Android.cs" />
     <Compile Include="Platform\Input\Joystick.Default.cs" />
