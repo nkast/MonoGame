@@ -23,7 +23,8 @@
   <ItemGroup>
     <Compile Include="GamePlatform.Desktop.cs" />
     <Compile Include="Platform\Graphics\SwapChainRenderTarget.cs" />
-    <Compile Include="Graphics\Texture2D.StbSharp.cs" />
+    <Compile Include="Graphics\Texture2D.Stream.DirectX.cs" />
+    <Compile Include="Graphics\Texture2D.FromStream.DX11.cs" />
     <Compile Include="Input\GamePad.XInput.cs" />
     <Compile Include="Input\InputKeyEventArgs.cs" />
     <Compile Include="Input\Joystick.Default.cs" />
@@ -53,7 +54,6 @@
 
   <ItemGroup>
     <Compile Include="..\ThirdParty\StbImageSharp\src\**\*.cs" LinkBase="Utilities\StbImageSharp" />
-    <Compile Include="..\ThirdParty\StbImageWriteSharp\src\**\*.cs" LinkBase="Utilities\StbImageWriteSharp" />
   </ItemGroup>
 
   <ItemGroup>
