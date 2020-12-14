@@ -40,7 +40,8 @@
     <Compile Include="GamePlatform.Mobile.cs" />
     <Compile Include="Graphics\GraphicsAdapter.Legacy.cs" />
     <Compile Include="Platform\Graphics\OpenGL.iOS.cs" />
-    <Compile Include="Graphics\Texture2D.StbSharp.cs" />
+    <Compile Include="Graphics\Texture2D.Stream.OpenGL.cs" />
+    <Compile Include="Graphics\Texture2D.FromStream.GL.cs" />
     <Compile Include="GraphicsDeviceManager.Legacy.cs" />
     <Compile Include="Input\GamePad.iOS.cs" />
     <Compile Include="Input\Joystick.Default.cs" />
