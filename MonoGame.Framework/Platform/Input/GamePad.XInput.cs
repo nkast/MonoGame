@@ -305,7 +305,7 @@ namespace Microsoft.Xna.Framework.Input
             catch (SharpDX.SharpDXException ex)
             {
                 const int deviceNotConnectedHResult = unchecked((int)0x8007048f);
-                if (ex.HResult == deviceNotConnectedHResult)
+                if (ex.ResultCode.Code == deviceNotConnectedHResult)
                 {
                     _connected[index] = false;
                     SetDisconnectedTimeout(index);

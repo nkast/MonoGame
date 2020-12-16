@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Runtime.InteropServices;
 using MonoGame.OpenGL;
+using MonoGame.Framework.Utilities;
 
 namespace Microsoft.Xna.Framework.Graphics
 {
@@ -63,7 +64,7 @@ namespace Microsoft.Xna.Framework.Graphics
         {
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, ibo);
             GraphicsExtensions.CheckGLError();
-            var elementSizeInByte = Marshal.SizeOf<T>();
+            var elementSizeInByte = ReflectionHelpers.SizeOf<T>.Get();
             IntPtr ptr = GL.MapBuffer(BufferTarget.ElementArrayBuffer, BufferAccess.ReadOnly);
             // Pointer to the start of data to read in the index buffer
             ptr = new IntPtr(ptr.ToInt64() + offsetInBytes);
@@ -114,7 +115,7 @@ namespace Microsoft.Xna.Framework.Graphics
         {
             GenerateIfRequired();
 
-            var elementSizeInByte = Marshal.SizeOf<T>();
+            var elementSizeInByte = ReflectionHelpers.SizeOf<T>.Get();
             var sizeInBytes = elementSizeInByte * elementCount;
             var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
             try

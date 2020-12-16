@@ -63,7 +63,7 @@ namespace Microsoft.Xna.Framework.Graphics
             Threading.EnsureUIThread();
 
             {
-                var elementSizeInByte = Marshal.SizeOf<T>();
+                var elementSizeInByte = ReflectionHelpers.SizeOf<T>.Get();
                 var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
                 try
                 {
