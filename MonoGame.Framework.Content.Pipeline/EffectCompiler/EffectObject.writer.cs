@@ -13,7 +13,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.EffectCompiler
 	{
 
         private const string Header = "MGFX";
-        private const int Version = 10;
+        private const int Version = 9;
 
         /// <summary>
         /// Writes the effect for loading later.
@@ -34,11 +34,17 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.EffectCompiler
             using(BinaryWriter memWriter = new BinaryWriter(memStream))
             {
             // Write all the constant buffers.
+            if (Version == 9)
+                memWriter.Write((byte)ConstantBuffers.Count);
+            else
                 memWriter.Write(ConstantBuffers.Count);
             foreach (var cbuffer in ConstantBuffers)
-                    cbuffer.Write(memWriter, options);
+                    cbuffer.Write(Version, memWriter, options);
 
             // Write all the shaders.
+            if (Version == 9)
+                memWriter.Write((byte)Shaders.Count);
+            else
                 memWriter.Write(Shaders.Count);
             foreach (var shader in Shaders)
                     shader.Write(memWriter, options);
@@ -47,6 +53,23 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.EffectCompiler
                 WriteParameters(memWriter, Parameters, Parameters.Length);
 
             // Write the techniques.
+            var isExtTechniques = false;
+            if (Version == 9)
+            {
+                isExtTechniques = (Techniques.Length > byte.MaxValue);
+                if (isExtTechniques)
+                {
+                    // Value 0 for techniqueCount is reserved.
+                    // This is an extension to the format to support more than 255 techniques.
+                    memWriter.Write((byte)0);
+                    Write7BitEncodedInt(writer, Techniques.Length);
+                }
+                else
+                {
+                    memWriter.Write((byte)Techniques.Length);
+                }
+            }
+            else
                 memWriter.Write(Techniques.Length);
             foreach (var technique in Techniques)
             {
@@ -54,6 +77,9 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.EffectCompiler
                     WriteAnnotations(memWriter, technique.annotation_handles);
 
                 // Write the passes.
+                if (Version == 9)
+                    memWriter.Write((byte)technique.pass_count);
+                else
                     memWriter.Write((int)technique.pass_count);
                 for (var p = 0; p < technique.pass_count; p++)
                 {
@@ -63,10 +89,18 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.EffectCompiler
                         WriteAnnotations(memWriter, pass.annotation_handles);
 
                     // Write the index for the vertex and pixel shaders.
-                    var vertexShader = GetShaderIndex(STATE_CLASS.VERTEXSHADER, pass.states);
-                    var pixelShader = GetShaderIndex(STATE_CLASS.PIXELSHADER, pass.states);
-                        memWriter.Write(vertexShader);
-                        memWriter.Write(pixelShader);
+                        var vertexShaderIndex = GetShaderIndex(STATE_CLASS.VERTEXSHADER, pass.states);
+                        var pixelShaderIndex = GetShaderIndex(STATE_CLASS.PIXELSHADER, pass.states);
+                        if (isExtTechniques)
+                        {
+                            WritePackedInt(memWriter, vertexShaderIndex);
+                            WritePackedInt(memWriter, pixelShaderIndex);
+                        }
+                        else
+                        {
+                            memWriter.Write((byte)vertexShaderIndex);
+                            memWriter.Write((byte)pixelShaderIndex);
+                        }
 
                     // Write the state objects too!
 					if (pass.blendState != null)
@@ -139,12 +173,19 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.EffectCompiler
             }
 
             // Write a tail to be used by the reader for validation.
-            writer.Write(Header.ToCharArray());
+            if (Version >= 9)
+                writer.Write(Header.ToCharArray());
         }
 
         private static void WriteParameters(BinaryWriter writer, d3dx_parameter[] parameters, int count)
         {
-            writer.Write(count);
+            if (Version <= 8)
+                writer.Write((byte)count);
+            else
+            if (Version == 9)
+                Write7BitEncodedInt(writer, count);
+            else
+                writer.Write(count);
             for (var i = 0; i < count; i++)
                 WriteParameter(writer, parameters[i]);
         }
@@ -183,7 +224,10 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.EffectCompiler
         private static void WriteAnnotations(BinaryWriter writer, d3dx_parameter[] annotations)
         {
             var count = annotations == null ? 0 : annotations.Length;
-            writer.Write(count);
+            if (Version == 9)
+                writer.Write((byte)count);
+            else
+                writer.Write(count);
             for (var i = 0; i < count; i++)
                 WriteParameter(writer, annotations[i]);
         }
