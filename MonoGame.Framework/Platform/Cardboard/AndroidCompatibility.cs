@@ -36,8 +36,8 @@ namespace Microsoft.Xna.Framework
 
             // check if MainActivity setup is correct. 
             var screenOrientation = Game.Activity.RequestedOrientation;
-            if (screenOrientation != Android.Content.PM.ScreenOrientation.FullSensor)
-                throw new InvalidOperationException("NaturalOrientation detection failed. Set ScreenOrientation in MainActivity to FullSensor.");
+            if (screenOrientation != Android.Content.PM.ScreenOrientation.Landscape)
+                throw new InvalidOperationException("NaturalOrientation detection failed. Set ScreenOrientation in MainActivity to Landscape.");
 
             if (((rotation == SurfaceOrientation.Rotation0 || rotation == SurfaceOrientation.Rotation180) &&
                 orientation == Orientation.Landscape)
