@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -8,6 +9,8 @@
     <GenerateProgramFile>false</GenerateProgramFile>
     <DefineConstants>DESKTOPGL</DefineConstants>
   </PropertyGroup>
+
+  <Import Project="MonoGame.Tests.Common.props" />
 
   <ItemGroup>
     <PackageReference Include="NUnitLite" Version="3.13.2" />
@@ -17,16 +20,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MonoGame.Framework\MonoGame.Framework.DesktopGL.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="bin\**\*" />
-    <Compile Remove="obj\**\*" />
-    <Compile Remove="Properties/**/*" />
-    <Compile Remove="Interactive/**/*" />
-    <Compile Remove="Runner/iOS/**/*" />
-
-    <Compile Remove="Framework/WindowsDX/**/*" />
   </ItemGroup>
 
   <ItemGroup>

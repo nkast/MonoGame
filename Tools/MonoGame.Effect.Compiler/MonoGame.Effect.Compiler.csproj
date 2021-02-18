@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
     <Description>The MonoGame Framework Effect Compiler (MGFXC) command line tool is used to compile shaders.</Description>
@@ -13,6 +14,8 @@
     <UseAppHost>true</UseAppHost>
   </PropertyGroup>
   
+  <Import Project="MonoGame.Effect.Compiler.Common.props" />
+
   <ItemGroup>
     <Compile Include="..\..\MonoGame.Framework\BoundingBox.cs" />
     <Compile Include="..\..\MonoGame.Framework\BoundingFrustum.cs" />
