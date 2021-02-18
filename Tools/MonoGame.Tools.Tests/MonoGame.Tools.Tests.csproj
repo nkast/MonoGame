@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
     <Description>The unit tests for the MonoGame framework.</Description>
@@ -12,6 +13,8 @@
     <AppendTargetFrameworkToOutputPath>False</AppendTargetFrameworkToOutputPath>
     <UseAppHost>true</UseAppHost>
   </PropertyGroup>
+
+  <Import Project="MonoGame.Tools.Tests.Common.props" />
 
   <ItemGroup>
     <PackageReference Include="NUnitLite" Version="3.13.2" />

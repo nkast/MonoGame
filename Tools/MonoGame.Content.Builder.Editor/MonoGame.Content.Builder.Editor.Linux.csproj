@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
     <Description>The MonoGame Framework Content Builder Editor (MGCB-Editor) is a graphical tool used for editing your content projects ready for processing.</Description>
@@ -11,6 +12,8 @@
     <AssemblyTitle>MGCB Editor</AssemblyTitle>
   </PropertyGroup>
 
+  <Import Project="MonoGame.Content.Builder.Editor.Common.props" />
+
   <ItemGroup>
     <None Remove="**\*.glade" />
     <EmbeddedResource Include="**\*.glade">
@@ -19,9 +22,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Platform\**\*" />
-    <Compile Remove="Platform\**\*" />
-
     <Compile Include="Platform\Linux\**\*.cs" />
   </ItemGroup>
 
