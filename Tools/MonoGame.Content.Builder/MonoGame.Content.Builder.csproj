@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
     <Description>The MonoGame Content Builder (MGCB) command line tool is used for optimizing content for runtime use.</Description>
@@ -12,6 +13,8 @@
     <AssemblyName>mgcb</AssemblyName>
     <UseAppHost>true</UseAppHost>
   </PropertyGroup>
+
+  <Import Project="MonoGame.Content.Builder.Common.props" />
 
   <ItemGroup>
     <None Include="..\AppReference.targets" />
