@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.Activation;
 #endif
+using Microsoft.Xna.Platform;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -80,7 +81,7 @@ namespace Microsoft.Xna.Framework
             _services.AddService(typeof(GamePlatform), Platform);
 
             // Calling Update() for first time initializes some systems
-            FrameworkDispatcher.Update();
+            ((IFrameworkDispatcher)FrameworkDispatcher.Current).Update();
 
             // Allow some optional per-platform construction to occur too.
             PlatformConstruct();
@@ -820,7 +821,7 @@ namespace Microsoft.Xna.Framework
             AssertNotDisposed();
             if (Platform.BeforeUpdate(gameTime))
             {
-                FrameworkDispatcher.Update();
+                ((IFrameworkDispatcher)FrameworkDispatcher.Current).Update();
 				
                 Update(gameTime);
 
