@@ -16,29 +16,20 @@ namespace Microsoft.Xna.Framework
     /// </remarks>
     public static class FrameworkDispatcher
     {
-        private static bool _initialized = false;
+        internal static Action OnUpdate;
 
         /// <summary>
         /// Processes framework events.
         /// </summary>
         public static void Update()
         {
-            if (!_initialized)
-                Initialize();
+            var updateHandler = OnUpdate;
+            if (updateHandler != null)
+                updateHandler();
 
-            DoUpdate();
-        }
-
-        private static void DoUpdate()
-        {
             DynamicSoundEffectInstanceManager.UpdatePlayingInstances();
             SoundEffectInstancePool.Update();
             Microphone.UpdateMicrophones();
-        }
-
-        private static void Initialize()
-        {
-            _initialized = true;
         }
     }
 }
