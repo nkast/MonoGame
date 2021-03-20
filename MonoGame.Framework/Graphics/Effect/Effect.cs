@@ -28,11 +28,21 @@ namespace Microsoft.Xna.Framework.Graphics
             /// </remarks>
             public const int MGFXVersion = 10;
 
-            public int Signature;
-            public int Version;
-            public int Profile;
-            public int EffectKey;
-            public int HeaderSize;
+            public readonly int Signature;
+            public readonly int Version;
+            public readonly int Profile;
+            public readonly int EffectKey;
+            public readonly int HeaderSize;
+
+            public MGFXHeader(byte[] effectCode, int index)
+            {
+                int offset = 0;
+                Signature = BitConverter.ToInt32(effectCode, index + offset); offset += 4;
+                Version = (int)effectCode[index + offset]; offset += 1;
+                Profile = (int)effectCode[index + offset]; offset += 1;
+                EffectKey = BitConverter.ToInt32(effectCode, index + offset); offset += 4;
+                HeaderSize = offset;
+            }
         }
 
         public EffectParameterCollection Parameters { get; private set; }
@@ -91,56 +101,43 @@ namespace Microsoft.Xna.Framework.Graphics
 			// effects without any shared instance state.
  
             //Read the header
-            MGFXHeader header = ReadHeader(effectCode, index);
-			var effectKey = header.EffectKey;
-			int headerSize = header.HeaderSize;
+            MGFXHeader header = new MGFXHeader(effectCode, index);
+            if (header.Signature != MGFXHeader.MGFXSignature)
+                throw new Exception("This does not appear to be a MonoGame MGFX file!");
+            if (header.Profile != Shader.Profile)
+                throw new Exception("This MGFX effect was built for a different platform!");
+            if (header.Version > MGFXHeader.MGFXVersion)
+                throw new Exception("This MGFX effect seems to be for a newer release of MonoGame.");
+            if (header.Version < MGFXHeader.MGFXVersion)
+                throw new Exception("This MGFX effect is for an older release of MonoGame and needs to be rebuilt.");
 
             // First look for it in the cache.
             //
             Effect cloneSource;
-            if (!graphicsDevice.EffectCache.TryGetValue(effectKey, out cloneSource))
+            lock (graphicsDevice.EffectCache)
             {
-                using (var stream = new MemoryStream(effectCode, index + headerSize, count - headerSize, false))
-            	using (var reader = new BinaryReaderEx(stream))
-            {
-                // Create one.
-                cloneSource = new Effect(graphicsDevice);
-                    cloneSource.ReadEffect(reader);
+                if (!graphicsDevice.EffectCache.TryGetValue(header.EffectKey, out cloneSource))
+                {
+                    using (var stream = new MemoryStream(effectCode, index + header.HeaderSize, count - header.HeaderSize, false))
+                    using (var reader = new BinaryReaderEx(stream))
+                    {
+                        // Create one.
+                        cloneSource = new Effect(graphicsDevice);
+                        cloneSource.ReadEffect(reader);
 
-                // Check file tail to ensure we parsed the content correctly.
-                    var tail = reader.ReadInt32();
-                    if (tail != MGFXHeader.MGFXSignature) throw new ArgumentException("The MGFX effect code was not parsed correctly.", "effectCode");                    
+                        // Check file tail to ensure we parsed the content correctly.
+                        var tail = reader.ReadInt32();
+                        if (tail != MGFXHeader.MGFXSignature) throw new ArgumentException("The MGFX effect code was not parsed correctly.", "effectCode");
 
-                // Cache the effect for later in its original unmodified state.
-                    graphicsDevice.EffectCache.Add(effectKey, cloneSource);
+                        // Cache the effect for later in its original unmodified state.
+                        graphicsDevice.EffectCache.Add(header.EffectKey, cloneSource);
+                    }
                 }
             }
 
             // Clone it.
             _isClone = true;
             Clone(cloneSource);
-        }
-
-        private MGFXHeader ReadHeader(byte[] effectCode, int index)
-        {
-            MGFXHeader header;
-            header.Signature = BitConverter.ToInt32(effectCode, index); index += 4;
-            header.Version = (int)effectCode[index++];
-            header.Profile = (int)effectCode[index++];
-            header.EffectKey = BitConverter.ToInt32(effectCode, index); index += 4;
-            header.HeaderSize = index;
-
-            if (header.Signature != MGFXHeader.MGFXSignature)
-                throw new Exception("This does not appear to be a MonoGame MGFX file!");
-            if (header.Version < MGFXHeader.MGFXVersion)
-                throw new Exception("This MGFX effect is for an older release of MonoGame and needs to be rebuilt.");
-            if (header.Version > MGFXHeader.MGFXVersion)
-                throw new Exception("This MGFX effect seems to be for a newer release of MonoGame.");
-
-            if (header.Profile != Shader.Profile)
-                throw new Exception("This MGFX effect was built for a different platform!");          
-            
-            return header;
         }
 
         /// <summary>
