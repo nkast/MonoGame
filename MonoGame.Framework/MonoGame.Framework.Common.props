@@ -335,8 +335,6 @@
     <Compile Include="Utilities\Lz4Stream\Lz4DecoderStream.cs" />
     <Compile Include="Utilities\LzxStream\LzxDecoderStream.cs" />
     <Compile Include="Utilities\ZLibStream\ZlibStream.cs" />
-    <Compile Include="Utilities\BinaryReaderEx.cs" />
-    <Compile Include="Utilities\BinaryWriterEx.cs" />
     <Compile Include="Utilities\ByteBufferPool.cs" />
     <Compile Include="Utilities\FileHelpers.cs" />
     <Compile Include="Utilities\GraphicsBackend.cs" />
