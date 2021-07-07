@@ -15,7 +15,7 @@ using System.Threading;
 using NVorbis;
 using MonoGame.OpenAL;
 
-namespace Microsoft.Xna.Framework.Audio
+namespace Microsoft.Xna.Platform.Audio
 {
     internal class OggStream : IDisposable
     {
@@ -42,9 +42,10 @@ namespace Microsoft.Xna.Framework.Audio
             FinishedAction = finishedAction;
             BufferCount = bufferCount;
 
-            alBufferIds = AL.GenBuffers(bufferCount);
+            alBufferIds = new int[bufferCount];
+            AL.GenBuffers(alBufferIds);
             ALHelper.CheckError("Failed to generate buffers.");
-            alSourceId = OpenALSoundController.Instance.ReserveSource();
+            alSourceId = AudioService.Current.ReserveSource();
 
             if (OggStreamer.Instance.XRam.IsInitialized)
             {
@@ -208,7 +209,7 @@ namespace Microsoft.Xna.Framework.Audio
                 Close();
             }
 
-            OpenALSoundController.Instance.RecycleSource(alSourceId);
+            AudioService.Current.RecycleSource(alSourceId);
 
             AL.DeleteBuffers(alBufferIds);
             ALHelper.CheckError("Failed to delete buffer.");
@@ -242,7 +243,7 @@ namespace Microsoft.Xna.Framework.Audio
                     var salvaged = new int[processed];
                     if (processed > 0)
                     {
-                        AL.SourceUnqueueBuffers(alSourceId, processed, out salvaged);
+                        AL.SourceUnqueueBuffers(alSourceId, processed, salvaged);
                         ALHelper.CheckError("Failed to unqueue buffers (second attempt).");
                     }
 
@@ -387,6 +388,7 @@ namespace Microsoft.Xna.Framework.Audio
 
             return readSamples != BufferSize;
         }
+
         static void CastBuffer(float[] inBuffer, short[] outBuffer, int length)
         {
             for (int i = 0; i < length; i++)

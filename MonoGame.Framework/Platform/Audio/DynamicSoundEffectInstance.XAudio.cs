@@ -2,51 +2,61 @@
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE.txt', which is part of this source code package.
 
+// Copyright (C)2021 Nick Kastellanos
+
 using System;
 using System.Collections.Generic;
+using Microsoft.Xna.Framework.Audio;
 using MonoGame.Framework.Utilities;
 using SharpDX;
 using SharpDX.Multimedia;
 using SharpDX.XAudio2;
 
-namespace Microsoft.Xna.Framework.Audio
+namespace Microsoft.Xna.Platform.Audio
 {
-    public sealed partial class DynamicSoundEffectInstance : SoundEffectInstance
+    public sealed partial class ConcreteDynamicSoundEffectInstance : ConcreteSoundEffectInstance
+        , IDynamicSoundEffectInstanceStrategy
     {
-        private Queue<AudioBuffer> _queuedBuffers;
-        private Queue<byte[]> _pooledBuffers;
+        private int d_sampleRate;
+        private AudioChannels d_channels;
+        private Queue<AudioBuffer> _queuedBuffers = new Queue<AudioBuffer>();
+        private Queue<byte[]> _pooledBuffers = new Queue<byte[]>();
         private static ByteBufferPool _bufferPool = new ByteBufferPool();
 
-        private void PlatformCreate()
+        public event EventHandler<EventArgs> OnBufferNeeded;
+
+        internal ConcreteDynamicSoundEffectInstance(AudioServiceStrategy audioServiceStrategy, int sampleRate, AudioChannels channels, float pan)
+            : base(audioServiceStrategy, null, pan)
         {
-            _format = new WaveFormat(_sampleRate, (int)_channels);
-            _voice = new SourceVoice(SoundEffect.Device, _format, true);
+            d_sampleRate = sampleRate;
+            d_channels = channels;
+            var format = new WaveFormat(sampleRate, (int)channels);
+
+            _voice = new SourceVoice(ConcreteAudioService.Device, format, true);
             _voice.BufferEnd += OnBufferEnd;
-            _queuedBuffers = new Queue<AudioBuffer>();
-            _pooledBuffers = new Queue<byte[]>();
         }
 
-        private int PlatformGetPendingBufferCount()
+        public int DynamicPlatformGetPendingBufferCount()
         {
             return _queuedBuffers.Count;
         }
 
-        private void PlatformPlay()
+        internal override void PlatformPlay(bool isLooped, float pitch)
         {
             _voice.Start();
         }
 
-        private void PlatformPause()
+        internal override void PlatformPause()
         {
             _voice.Stop();
         }
 
-        private void PlatformResume()
+        internal override void PlatformResume(bool isLooped)
         {
             _voice.Start();
         }
 
-        private void PlatformStop()
+        internal override void PlatformStop()
         {
             _voice.Stop();
 
@@ -61,7 +71,7 @@ namespace Microsoft.Xna.Framework.Audio
             }
         }
 
-        private void PlatformSubmitBuffer(byte[] buffer, int offset, int count)
+        public void DynamicPlatformSubmitBuffer(byte[] buffer, int offset, int count, SoundState state)
         {
             // we need to copy so datastream does not pin the buffer that the user might modify later
             byte[] pooledBuffer;
@@ -77,24 +87,11 @@ namespace Microsoft.Xna.Framework.Audio
             _queuedBuffers.Enqueue(audioBuffer);
         }
 
-        private void PlatformUpdateQueue()
+        public void DynamicPlatformUpdateQueue()
         {
             // The XAudio implementation utilizes callbacks, so no work here.
         }
 
-        private void PlatformDispose(bool disposing)
-        {
-            if (disposing)
-            {
-                while (_queuedBuffers.Count > 0)
-                {
-                    var buffer = _queuedBuffers.Dequeue();
-                    buffer.Stream.Dispose();
-                    _bufferPool.Return(_pooledBuffers.Dequeue());
-                }
-            }
-            // _voice is disposed by SoundEffectInstance.PlatformDispose
-        }
 
         private void OnBufferEnd(IntPtr obj)
         {
@@ -106,7 +103,25 @@ namespace Microsoft.Xna.Framework.Audio
                 _bufferPool.Return(_pooledBuffers.Dequeue());
             }
 
-            CheckBufferCount();
+            // Raise the event
+            var handler = OnBufferNeeded;
+            if (handler != null)
+                handler(this, EventArgs.Empty);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                while (_queuedBuffers.Count > 0)
+                {
+                    var buffer = _queuedBuffers.Dequeue();
+                    buffer.Stream.Dispose();
+                    _bufferPool.Return(_pooledBuffers.Dequeue());
+                }
+            }
+            
+            base.Dispose(disposing);
         }
 
     }

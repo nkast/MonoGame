@@ -2,51 +2,48 @@
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE.txt', which is part of this source code package.
 
+// Copyright (C)2021 Nick Kastellanos
+
 using System;
-using MonoGame.OpenAL;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
+using Microsoft.Xna.Platform.Audio.OpenAL;
 
-namespace Microsoft.Xna.Framework.Audio
+namespace Microsoft.Xna.Platform.Audio
 {
-    public partial class SoundEffectInstance : IDisposable
+    public class ConcreteSoundEffectInstance : SoundEffectInstanceStrategy
     {
-		internal SoundState SoundState = SoundState.Stopped;
-		private bool _looped = false;
-		private float _alVolume = 1f;
+        float _alVolume = 1f;
 
-		internal int SourceId;
-        private float reverb = 0f;
+        internal int _sourceId;
+        float reverb;
         bool applyFilter = false;
         EfxFilterType filterType;
         float filterQ;
         float frequency;
-        int pauseCount;
+        // emmiter's position/velocity relative to the listener
+        Vector3 _relativePosition;
+        Vector3 _relativeVelocity;
 
-        internal readonly object sourceMutex = new object();
+
+        private AudioServiceStrategy _audioServiceStrategy;
+        private ConcreteSoundEffect _concreteSoundEffect;
+        internal ConcreteAudioService ConcreteAudioService { get { return (ConcreteAudioService)_audioServiceStrategy; } }
+
+        #region Initialization
         
-        internal OpenALSoundController controller;
-        
-        internal bool HasSourceId = false;
-
-#region Initialization
-
-        /// <summary>
-        /// Creates a standalone SoundEffectInstance from given wavedata.
-        /// </summary>
-        internal void PlatformInitialize(byte[] buffer, int sampleRate, int channels)
+        internal ConcreteSoundEffectInstance(AudioServiceStrategy audioServiceStrategy, SoundEffectStrategy sfxStrategy, float pan)
+            : base(audioServiceStrategy, sfxStrategy, pan)
         {
-            InitializeSound();
+            _audioServiceStrategy = audioServiceStrategy;
+            _concreteSoundEffect = (ConcreteSoundEffect)sfxStrategy;
+        }
+        
+        internal override void PlatformReuseInstance(ref SoundEffect currentEffect, SoundEffect newEffect, float pan)
+        {
         }
 
-        /// <summary>
-        /// Gets the OpenAL sound controller, constructs the sound buffer, and sets up the event delegates for
-        /// the reserved and recycled events.
-        /// </summary>
-        internal void InitializeSound()
-        {
-            controller = OpenALSoundController.Instance;
-        }
-
-#endregion // Initialization
+        #endregion // Initialization
 
         /// <summary>
         /// Converts the XNA [-1, 1] pitch range to OpenAL pitch (0, INF) or Android SoundPool playback rate [0.5, 2].
@@ -57,228 +54,187 @@ namespace Microsoft.Xna.Framework.Audio
             return (float)Math.Pow(2, xnaPitch);
         }
 
-        private void PlatformApply3D(AudioListener listener, AudioEmitter emitter)
+        internal override void PlatformApply3D(AudioListener listener, AudioEmitter emitter)
         {
-            if (!HasSourceId)
-                return;
-            // get AL's listener position
-            float x, y, z;
-            AL.GetListener(ALListener3f.Position, out x, out y, out z);
-            ALHelper.CheckError("Failed to get source position.");
-
-            // get the emitter offset from origin
-            Vector3 posOffset = emitter.Position - listener.Position;
             // set up matrix to transform world space coordinates to listener space coordinates
-            Matrix worldSpaceToListenerSpace = Matrix.Transpose(Matrix.CreateWorld(Vector3.Zero, listener.Forward, listener.Up));
+            Matrix worldSpaceToListenerSpace = Matrix.Transpose(Matrix.CreateWorld(listener.Position, listener.Forward, listener.Up));
             // set up our final position and velocity according to orientation of listener
-            Vector3 finalPos = new Vector3(x + posOffset.X, y + posOffset.Y, z + posOffset.Z);
-            finalPos = Vector3.Transform(finalPos, worldSpaceToListenerSpace);
-            Vector3 finalVel = emitter.Velocity - listener.Velocity;
-            finalVel = Vector3.Transform(finalVel, worldSpaceToListenerSpace);
+            _relativePosition = emitter.Position;
+            Vector3.Transform(ref _relativePosition, ref worldSpaceToListenerSpace, out _relativePosition);
+            _relativeVelocity = emitter.Velocity - listener.Velocity;
+            Vector3.TransformNormal(ref _relativeVelocity, ref worldSpaceToListenerSpace, out _relativeVelocity);
 
-            // set the position based on relative positon
-            AL.Source(SourceId, ALSource3f.Position, finalPos.X, finalPos.Y, finalPos.Z);
-            ALHelper.CheckError("Failed to set source position.");
-            AL.Source(SourceId, ALSource3f.Velocity, finalVel.X, finalVel.Y, finalVel.Z);
-            ALHelper.CheckError("Failed to set source velocity.");
-
-            AL.Source(SourceId, ALSourcef.ReferenceDistance, SoundEffect.DistanceScale);
-            ALHelper.CheckError("Failed to set source distance scale.");
-            AL.DopplerFactor(SoundEffect.DopplerScale);
-            ALHelper.CheckError("Failed to set Doppler scale.");
-        }
-
-        private void PlatformPause()
-        {
-            if (!HasSourceId || SoundState != SoundState.Playing)
-                return;
-
-            if (pauseCount == 0)
+            if (_sourceId != 0)
             {
-                AL.SourcePause(SourceId);
-                ALHelper.CheckError("Failed to pause source.");
+                // set the position based on relative position
+                AL.Source(_sourceId, ALSource3f.Position, ref _relativePosition);
+                ALHelper.CheckError("Failed to set source position.");
+                AL.Source(_sourceId, ALSource3f.Velocity, ref _relativeVelocity);
+                ALHelper.CheckError("Failed to set source velocity.");
+                AL.Source(_sourceId, ALSourcef.ReferenceDistance, SoundEffect.DistanceScale);
+                ALHelper.CheckError("Failed to set source distance scale.");
+                AL.DopplerFactor(SoundEffect.DopplerScale);
+                ALHelper.CheckError("Failed to set Doppler scale.");
             }
-            ++pauseCount;
-            SoundState = SoundState.Paused;
         }
 
-        private void PlatformPlay()
+        internal override void PlatformPause()
         {
-            SourceId = 0;
-            HasSourceId = false;
-            SourceId = controller.ReserveSource();
-            HasSourceId = true;
+            AL.SourcePause(_sourceId);
+            ALHelper.CheckError("Failed to pause source.");
+        }
 
-            int bufferId = _effect.SoundBuffer.OpenALDataBuffer;
-            AL.Source(SourceId, ALSourcei.Buffer, bufferId);
+        internal override void PlatformPlay(bool isLooped, float pitch)
+        {
+            _sourceId = ConcreteAudioService.ReserveSource();
+
+            // bind buffer to source
+            int bufferId = _concreteSoundEffect.GetALSoundBuffer().OpenALDataBuffer;
+            AL.Source(_sourceId, ALSourcei.Buffer, bufferId);
             ALHelper.CheckError("Failed to bind buffer to source.");
 
             // Send the position, gain, looping, pitch, and distance model to the OpenAL driver.
-            if (!HasSourceId)
-				return;
 
-            AL.Source(SourceId, ALSourcei.SourceRelative, 1);
+            AL.Source(_sourceId, ALSourcei.SourceRelative, 1);
             ALHelper.CheckError("Failed set source relative.");
             // Distance Model
-			AL.DistanceModel (ALDistanceModel.InverseDistanceClamped);
+            AL.DistanceModel (ALDistanceModel.InverseDistanceClamped);
             ALHelper.CheckError("Failed set source distance.");
-			// Pan
-			AL.Source (SourceId, ALSource3f.Position, _pan, 0f, 0f);
-            ALHelper.CheckError("Failed to set source pan.");
+            // Position/Pan
+            AL.Source(_sourceId, ALSource3f.Position, ref _relativePosition);
+            ALHelper.CheckError("Failed to set source position/pan.");
             // Velocity
-			AL.Source (SourceId, ALSource3f.Velocity, 0f, 0f, 0f);
+            AL.Source(_sourceId, ALSource3f.Velocity, ref _relativeVelocity);
             ALHelper.CheckError("Failed to set source pan.");
-			// Volume
-            AL.Source(SourceId, ALSourcef.Gain, _alVolume);
+            // Distance Scale
+            AL.Source(_sourceId, ALSourcef.ReferenceDistance, SoundEffect.DistanceScale);
+            ALHelper.CheckError("Failed to set source distance scale.");
+            // Doppler Scale
+            AL.DopplerFactor(SoundEffect.DopplerScale);
+            ALHelper.CheckError("Failed to set Doppler scale.");
+            // Volume
+            AL.Source(_sourceId, ALSourcef.Gain, _alVolume);
             ALHelper.CheckError("Failed to set source volume.");
-			// Looping
-			AL.Source (SourceId, ALSourceb.Looping, IsLooped);
+            // Looping
+            AL.Source(_sourceId, ALSourceb.Looping, isLooped);
             ALHelper.CheckError("Failed to set source loop state.");
-			// Pitch
-			AL.Source (SourceId, ALSourcef.Pitch, XnaPitchToAlPitch(_pitch));
+            // Pitch
+            AL.Source(_sourceId, ALSourcef.Pitch, XnaPitchToAlPitch(pitch));
             ALHelper.CheckError("Failed to set source pitch.");
 
-            ApplyReverb ();
-            ApplyFilter ();
+            ApplyReverb();
+            ApplyFilter();
 
-            AL.SourcePlay(SourceId);
+            AL.SourcePlay(_sourceId);
             ALHelper.CheckError("Failed to play source.");
-
-            SoundState = SoundState.Playing;
         }
 
-        private void PlatformResume()
+        internal override void PlatformResume(bool isLooped)
         {
-            if (!HasSourceId)
+            AL.SourcePlay(_sourceId);
+            ALHelper.CheckError("Failed to play source.");
+        }
+
+        internal override void PlatformStop()
+        {
+            AL.SourceStop(_sourceId);
+            ALHelper.CheckError("Failed to stop source.");
+
+            // Reset the SendFilter to 0 if we are NOT using reverb since
+            // sources are recycled
+            if (ConcreteAudioService.SupportsEfx)
             {
-                Play();
-                return;
+                ConcreteAudioService.Efx.BindSourceToAuxiliarySlot(_sourceId, 0, 0, 0);
+                ALHelper.CheckError("Failed to unset reverb.");
+                AL.Source(_sourceId, ALSourcei.EfxDirectFilter, 0);
+                ALHelper.CheckError("Failed to unset filter.");
             }
 
-            if (SoundState == SoundState.Paused)
-            {
-                --pauseCount;
-                if (pauseCount == 0)
-                {
-                    AL.SourcePlay(SourceId);
-                    ALHelper.CheckError("Failed to play source.");
-                }
-            }
-            SoundState = SoundState.Playing;
+            ConcreteAudioService.RecycleSource(_sourceId);
+            _sourceId = 0;
         }
 
-        private void PlatformStop(bool immediate)
+        internal override void PlatformRelease(bool isLooped)
         {
-            FreeSource();
-            if (pauseCount > 0) pauseCount = 0;
-            SoundState = SoundState.Stopped;
-        }
-
-        private void FreeSource()
-        {
-            if (!HasSourceId)
-                return;
-
-            lock (sourceMutex)
+            if (isLooped)
             {
-                if (HasSourceId && AL.IsSource(SourceId))
-                {
-                    AL.SourceStop(SourceId);
-                    ALHelper.CheckError("Failed to stop source.");
-
-                    // Reset the SendFilter to 0 if we are NOT using reverb since
-                    // sources are recycled
-                    if (OpenALSoundController.Instance.SupportsEfx)
-                    {
-                        OpenALSoundController.Efx.BindSourceToAuxiliarySlot(SourceId, 0, 0, 0);
-                        ALHelper.CheckError("Failed to unset reverb.");
-                        AL.Source(SourceId, ALSourcei.EfxDirectFilter, 0);
-                        ALHelper.CheckError("Failed to unset filter.");
-                    }
-
-                    controller.FreeSource(this);
-                }
-            }
-        }
-
-        private void PlatformSetIsLooped(bool value)
-        {
-            _looped = value;
-
-            if (HasSourceId)
-            {
-                AL.Source(SourceId, ALSourceb.Looping, _looped);
+                AL.Source(_sourceId, ALSourceb.Looping, false);
                 ALHelper.CheckError("Failed to set source loop state.");
             }
         }
 
-        private bool PlatformGetIsLooped()
+        internal override bool PlatformUpdateState(ref SoundState state)
         {
-            return _looped;
+            // check if the sound has stopped
+            if (state == SoundState.Playing)
+            {
+                var alState = AL.GetSourceState(_sourceId);
+                ALHelper.CheckError("Failed to get source state.");
+
+                if (alState == ALSourceState.Stopped)
+                {
+                    // update instance
+                    PlatformStop();
+                    state = SoundState.Stopped;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
-        private void PlatformSetPan(float value)
+        internal override void PlatformSetIsLooped(SoundState state, bool isLooped)
         {
-            if (HasSourceId)
+            if (_sourceId != 0)
             {
-                AL.Source(SourceId, ALSource3f.Position, value, 0.0f, 0.1f);
+                AL.Source(_sourceId, ALSourceb.Looping, isLooped);
+                ALHelper.CheckError("Failed to set source loop state.");
+            }
+        }
+
+        internal override void PlatformSetPan(float pan)
+        {
+            // OpenAL doesn't support Panning. We emulate it using 3D audio.
+            // If the user set both Pan and Apply3D(), only the last call takes effect.
+            _relativePosition.X = (float)Math.Sin(pan * MathHelper.PiOver2) * SoundEffect.DistanceScale;
+            _relativePosition.Y = (float)Math.Cos(pan * MathHelper.PiOver2) * SoundEffect.DistanceScale;
+            _relativePosition.Z = 0f;
+
+            if (_sourceId != 0)
+            {
+                AL.Source(_sourceId, ALSource3f.Position, ref _relativePosition);
                 ALHelper.CheckError("Failed to set source pan.");
             }
         }
 
-        private void PlatformSetPitch(float value)
+        internal override void PlatformSetPitch(float pitch)
         {
-            if (HasSourceId)
+            if (_sourceId != 0)
             {
-                AL.Source(SourceId, ALSourcef.Pitch, XnaPitchToAlPitch(value));
+                AL.Source(_sourceId, ALSourcef.Pitch, XnaPitchToAlPitch(pitch));
                 ALHelper.CheckError("Failed to set source pitch.");
             }
         }
 
-        private SoundState PlatformGetState()
-        {
-            if (!HasSourceId)
-                return SoundState.Stopped;
-            
-            var alState = AL.GetSourceState(SourceId);
-            ALHelper.CheckError("Failed to get source state.");
-
-            switch (alState)
-            {
-                case ALSourceState.Initial:
-                case ALSourceState.Stopped:
-                    SoundState = SoundState.Stopped;
-                    break;
-
-                case ALSourceState.Paused:
-                    SoundState = SoundState.Paused;
-                    break;
-
-                case ALSourceState.Playing:
-                    SoundState = SoundState.Playing;
-                    break;
-            }
-
-            return SoundState;
-        }
-
-        private void PlatformSetVolume(float value)
+        internal override void PlatformSetVolume(float value)
         {
             _alVolume = value;
 
-            if (HasSourceId)
+            if (_sourceId != 0)
             {
-                AL.Source(SourceId, ALSourcef.Gain, _alVolume);
+                AL.Source(_sourceId, ALSourcef.Gain, _alVolume);
                 ALHelper.CheckError("Failed to set source volume.");
             }
         }
 
-        internal void PlatformSetReverbMix(float mix)
+        internal override void PlatformSetReverbMix(SoundState state, float mix, float pan)
         {
-            if (!OpenALSoundController.Efx.IsInitialized)
+            if (!ConcreteAudioService.Efx.IsInitialized)
                 return;
+
             reverb = mix;
-            if (State == SoundState.Playing)
+
+            if (state == SoundState.Playing)
             {
                 ApplyReverb();
                 reverb = 0f;
@@ -287,47 +243,47 @@ namespace Microsoft.Xna.Framework.Audio
 
         void ApplyReverb()
         {
-            if (reverb > 0f && SoundEffect.ReverbSlot != 0)
+            if (reverb > 0f && ConcreteAudioService.ReverbSlot != 0)
             {
-                OpenALSoundController.Efx.BindSourceToAuxiliarySlot(SourceId, (int)SoundEffect.ReverbSlot, 0, 0);
+                ConcreteAudioService.Efx.BindSourceToAuxiliarySlot(_sourceId, ConcreteAudioService.ReverbSlot, 0, 0);
                 ALHelper.CheckError("Failed to set reverb.");
             }
         }
 
         void ApplyFilter()
         {
-            if (applyFilter && controller.Filter > 0)
+            if (applyFilter && ConcreteAudioService.Filter > 0)
             {
                 var freq = frequency / 20000f;
                 var lf = 1.0f - freq;
-                var efx = OpenALSoundController.Efx;
-                efx.Filter(controller.Filter, EfxFilteri.FilterType, (int)filterType);
+                var efx = ConcreteAudioService.Efx;
+                efx.Filter(ConcreteAudioService.Filter, EfxFilteri.FilterType, (int)filterType);
                 ALHelper.CheckError("Failed to set filter.");
                 switch (filterType)
                 {
                 case EfxFilterType.Lowpass:
-                    efx.Filter(controller.Filter, EfxFilterf.LowpassGainHF, freq);
+                    efx.Filter(ConcreteAudioService.Filter, EfxFilterf.LowpassGainHF, freq);
                     ALHelper.CheckError("Failed to set LowpassGainHF.");
                     break;
                 case EfxFilterType.Highpass:
-                    efx.Filter(controller.Filter, EfxFilterf.HighpassGainLF, freq);
+                    efx.Filter(ConcreteAudioService.Filter, EfxFilterf.HighpassGainLF, freq);
                     ALHelper.CheckError("Failed to set HighpassGainLF.");
                     break;
                 case EfxFilterType.Bandpass:
-                    efx.Filter(controller.Filter, EfxFilterf.BandpassGainHF, freq);
+                    efx.Filter(ConcreteAudioService.Filter, EfxFilterf.BandpassGainHF, freq);
                     ALHelper.CheckError("Failed to set BandpassGainHF.");
-                    efx.Filter(controller.Filter, EfxFilterf.BandpassGainLF, lf);
+                    efx.Filter(ConcreteAudioService.Filter, EfxFilterf.BandpassGainLF, lf);
                     ALHelper.CheckError("Failed to set BandpassGainLF.");
                     break;
                 }
-                AL.Source(SourceId, ALSourcei.EfxDirectFilter, controller.Filter);
+                AL.Source(_sourceId, ALSourcei.EfxDirectFilter, ConcreteAudioService.Filter);
                 ALHelper.CheckError("Failed to set DirectFilter.");
             }
         }
 
-        internal void PlatformSetFilter(FilterMode mode, float filterQ, float frequency)
+        internal override void PlatformSetFilter(SoundState state, FilterMode mode, float filterQ, float frequency)
         {
-            if (!OpenALSoundController.Efx.IsInitialized)
+            if (!ConcreteAudioService.Efx.IsInitialized)
                 return;
 
             applyFilter = true;
@@ -343,26 +299,31 @@ namespace Microsoft.Xna.Framework.Audio
                 filterType = EfxFilterType.Highpass;
                 break;
             }
+
             this.filterQ = filterQ;
             this.frequency = frequency;
-            if (State == SoundState.Playing)
+
+            if (state == SoundState.Playing)
             {
                 ApplyFilter();
                 applyFilter = false;
             }
         }
 
-        internal void PlatformClearFilter()
+        internal override void PlatformClearFilter()
         {
-            if (!OpenALSoundController.Efx.IsInitialized)
+            if (!ConcreteAudioService.Efx.IsInitialized)
                 return;
 
             applyFilter = false;
         }
 
-        private void PlatformDispose(bool disposing)
+        protected override void Dispose(bool disposing)
         {
-            FreeSource();
+            if (disposing)
+            {
+            }
+            
         }
     }
 }

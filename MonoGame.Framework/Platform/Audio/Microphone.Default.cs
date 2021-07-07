@@ -4,30 +4,36 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.Xna.Platform.Audio;
 
-namespace Microsoft.Xna.Framework.Audio
+namespace Microsoft.Xna.Platform.Audio
 {
     /// <summary>
-    /// Provides microphones capture features. 
+    /// Provides microphones capture features.
     /// </summary>	
-    public sealed partial class Microphone
+    public sealed class ConcreteMicrophone : MicrophoneStrategy
     {
-        internal void PlatformStart()
+        internal override void PlatformStart(string deviceName, int sampleRate, int sampleSizeInBytes)
         {
 			throw new NotImplementedException();
         }
 
-        internal void PlatformStop()
+        internal override void PlatformStop()
         {
 			throw new NotImplementedException();
         }
-		
-		internal void Update()
+
+        internal override bool PlatformIsHeadset()
+        {
+            throw new NotImplementedException();
+        }
+
+        internal override bool PlatformUpdateBuffer()
 		{
 			throw new NotImplementedException();
 		}
 		
-		internal int PlatformGetData(byte[] buffer, int offset, int count)
+		internal override int PlatformGetData(byte[] buffer, int offset, int count)
         {
             throw new NotImplementedException();
         }

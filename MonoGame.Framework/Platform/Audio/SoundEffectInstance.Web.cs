@@ -2,77 +2,97 @@
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE.txt', which is part of this source code package.
 
+// Copyright (C)2021 Nick Kastellanos
+
 using System;
-using System.IO;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 
-namespace Microsoft.Xna.Framework.Audio
+namespace Microsoft.Xna.Platform.Audio
 {
-    public partial class SoundEffectInstance : IDisposable
+    public class ConcreteSoundEffectInstance : SoundEffectInstanceStrategy
     {
-        internal void PlatformInitialize(byte[] buffer, int sampleRate, int channels)
+
+        private AudioServiceStrategy _audioServiceStrategy;        
+        private ConcreteSoundEffect _concreteSoundEffect;
+        internal ConcreteAudioService ConcreteAudioService { get { return (ConcreteAudioService)_audioServiceStrategy; } }
+
+
+        internal ConcreteSoundEffectInstance(AudioServiceStrategy audioServiceStrategy, SoundEffectStrategy sfxStrategy, float pan)
+            : base(audioServiceStrategy, sfxStrategy, pan)
+        {
+            _audioServiceStrategy = audioServiceStrategy;
+            _concreteSoundEffect = (ConcreteSoundEffect)sfxStrategy;
+
+        }
+
+        internal override void PlatformReuseInstance(ref SoundEffect currentEffect, SoundEffect newEffect, float pan)
         {
         }
 
-        private void PlatformApply3D(AudioListener listener, AudioEmitter emitter)
+        internal override void PlatformApply3D(AudioListener listener, AudioEmitter emitter)
         {
         }
 
-        private void PlatformPause()
+        internal override void PlatformPause()
         {
         }
 
-        private void PlatformPlay()
+        internal override void PlatformPlay(bool isLooped, float pitch)
         {
         }
 
-        private void PlatformResume()
+        internal override void PlatformResume(bool isLooped)
         {
         }
 
-        private void PlatformStop(bool immediate)
+        internal override void PlatformStop()
         {
         }
 
-        private void PlatformSetIsLooped(bool value)
+        internal override void PlatformRelease(bool isLooped)
         {
         }
 
-        private bool PlatformGetIsLooped()
+        internal override bool PlatformUpdateState(ref SoundState state)
         {
             return false;
         }
 
-        private void PlatformSetPan(float value)
+        internal override void PlatformSetIsLooped(SoundState state, bool isLooped)
         {
         }
 
-        private void PlatformSetPitch(float value)
+        internal override void PlatformSetPan(float pan)
         {
         }
 
-        private SoundState PlatformGetState()
-        {
-            return SoundState.Stopped;
-        }
-
-        private void PlatformSetVolume(float value)
+        internal override void PlatformSetPitch(float pitch)
         {
         }
 
-        internal void PlatformSetReverbMix(float mix)
+        internal override void PlatformSetVolume(float value)
         {
         }
 
-        internal void PlatformSetFilter(FilterMode mode, float filterQ, float frequency)
+        internal override void PlatformSetReverbMix(SoundState state, float mix, float pan)
         {
         }
 
-        internal void PlatformClearFilter()
+        internal override void PlatformSetFilter(SoundState state, FilterMode mode, float filterQ, float frequency)
         {
         }
 
-        private void PlatformDispose(bool disposing)
+        internal override void PlatformClearFilter()
         {
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+            }
+            
         }
     }
 }

@@ -2,47 +2,71 @@
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE.txt', which is part of this source code package.
 
-using System;
+// Copyright (C)2021 Nick Kastellanos
 
-namespace Microsoft.Xna.Framework.Audio
+using System;
+using Microsoft.Xna.Framework.Audio;
+
+namespace Microsoft.Xna.Platform.Audio
 {
-    public sealed partial class DynamicSoundEffectInstance : SoundEffectInstance
+    public sealed partial class ConcreteDynamicSoundEffectInstance : ConcreteSoundEffectInstance
+        , IDynamicSoundEffectInstanceStrategy
     {
-        private void PlatformCreate()
+        private int d_sampleRate;
+        private AudioChannels d_channels;
+
+        public event EventHandler<EventArgs> OnBufferNeeded;
+
+        internal ConcreteDynamicSoundEffectInstance(AudioServiceStrategy audioServiceStrategy, int sampleRate, AudioChannels channels, float pan)
+            : base(audioServiceStrategy, null, pan)
         {
+
         }
 
-        private int PlatformGetPendingBufferCount()
+        public void DynamicPlatformConstruct(AudioServiceStrategy audioServiceStrategy, int sampleRate, AudioChannels channels)
+        {
+            ConcreteAudioService = (ConcreteAudioService)audioServiceStrategy;
+            d_sampleRate = sampleRate;
+            d_channels = channels;
+        }
+
+        public int DynamicPlatformGetPendingBufferCount()
         {
             return 0;
         }
 
-        private void PlatformPlay()
+        internal override void PlatformPlay(bool isLooped, float pitch)
         {
         }
 
-        private void PlatformPause()
+        internal override void PlatformPause()
         {
         }
 
-        private void PlatformResume()
+        internal override void PlatformResume(bool isLooped)
         {
         }
 
-        private void PlatformStop()
+        internal override void PlatformStop()
         {
         }
 
-        private void PlatformSubmitBuffer(byte[] buffer, int offset, int count)
+        public void DynamicPlatformSubmitBuffer(byte[] buffer, int offset, int count, SoundState state)
         {
         }
 
-        private void PlatformDispose(bool disposing)
+        public void DynamicPlatformUpdateQueue()
         {
         }
 
-        private void PlatformUpdateQueue()
+        protected override void Dispose(bool disposing)
         {
+            if (disposing)
+            {
+            }
+
+            base.Dispose(disposing);
         }
+
     }
 }
