@@ -52,7 +52,7 @@ namespace Microsoft.Xna.Framework
         private bool _initialized = false;
         private bool _isFixedTimeStep = true;
 
-        private TimeSpan _targetElapsedTime = TimeSpan.FromTicks(166667); // 60fps
+        private TimeSpan _targetElapsedTime = TimeSpan.FromTicks(166666); // 60fps
         private TimeSpan _inactiveSleepTime = TimeSpan.FromSeconds(0.02);
 
         private TimeSpan _maxElapsedTime = TimeSpan.FromMilliseconds(500);
@@ -217,13 +217,8 @@ namespace Microsoft.Xna.Framework
             get { return _maxElapsedTime; }
             set
             {
-                if (value < TimeSpan.Zero)
-                    throw new ArgumentOutOfRangeException(
-                        "The time must be positive.", default(Exception));
-                
-                if (value < _targetElapsedTime)
-                    throw new ArgumentOutOfRangeException(
-                        "The time must be at least TargetElapsedTime", default(Exception));
+                if (value < TimeSpan.FromMilliseconds(500))
+                    throw new ArgumentOutOfRangeException("The time must be at least 0.5s");
 
                 _maxElapsedTime = value;
             }
@@ -268,10 +263,6 @@ namespace Microsoft.Xna.Framework
                 if (value <= TimeSpan.Zero)
                     throw new ArgumentOutOfRangeException(
                         "The time must be positive and non-zero.", default(Exception));
-
-                if (value > _maxElapsedTime)
-                    throw new ArgumentOutOfRangeException(
-                        "The time can not be larger than MaxElapsedTime", default(Exception));
 
                 if (value != _targetElapsedTime)
                 {
@@ -531,17 +522,22 @@ namespace Microsoft.Xna.Framework
             // any change fully in both the fixed and variable timestep 
             // modes across multiple devices and platforms.
 
-        RetryTick:
-
-            if (!IsActive && (InactiveSleepTime.TotalMilliseconds >= 1.0))
+            // implement InactiveSleepTime to save battery life 
+            // and/or release CPU time to other threads and processes.
+            if (!IsActive)
             {
 #if WINDOWS_UAP
                 lock (_locker)
                     System.Threading.Monitor.Wait(_locker, (int)InactiveSleepTime.TotalMilliseconds);
+#elif WINRT
+                lock (_locker)
+                    System.Threading.Monitor.Wait(_locker, (int)InactiveSleepTime.TotalMilliseconds);       
 #else
                 System.Threading.Thread.Sleep((int)InactiveSleepTime.TotalMilliseconds);
 #endif
             }
+
+        RetryTick:
 
             // Advance the accumulated elapsed time.
             var currentTicks = _gameTimer.Elapsed.Ticks;
@@ -550,26 +546,27 @@ namespace Microsoft.Xna.Framework
 
             if (IsFixedTimeStep && _accumulatedElapsedTime < TargetElapsedTime)
             {
-                // Sleep for as long as possible without overshooting the update time
-                var sleepTime = (TargetElapsedTime - _accumulatedElapsedTime).TotalMilliseconds;
-                // We only have a precision timer on Windows, so other platforms may still overshoot
-#if WINDOWS && !DESKTOPGL
-                MonoGame.Framework.Utilities.TimerHelper.SleepForNoMoreThan(sleepTime);
+                // When game IsActive use CPU Spin.
+                /*
+                if ((TargetElapsedTime - _accumulatedElapsedTime).TotalMilliseconds >= 2.0)
+                {
+#if (WINDOWS && !DESKTOPGL) || DESKTOPGL || ANDROID || IOS
+                    System.Threading.Thread.Sleep(0);
 #elif WINDOWS_UAP
-                lock (_locker)
-                    if (sleepTime >= 2.0)
-                        System.Threading.Monitor.Wait(_locker, 1);
-#elif DESKTOPGL || ANDROID || IOS
-                if (sleepTime >= 2.0)
-                    System.Threading.Thread.Sleep(1);
+                    lock (_locker)
+                        System.Threading.Monitor.Wait(_locker, 0);
 #endif
+                }
+                */
+                
                 // Keep looping until it's time to perform the next update
                 goto RetryTick;
             }
 
             // Do not allow any update to take longer than our maximum.
-            if (_accumulatedElapsedTime > _maxElapsedTime)
-                _accumulatedElapsedTime = _maxElapsedTime;
+            var maxElapsedTime = TimeSpan.FromTicks(Math.Max(_maxElapsedTime.Ticks, _targetElapsedTime.Ticks));
+            if (_accumulatedElapsedTime > maxElapsedTime)
+                _accumulatedElapsedTime = maxElapsedTime;
 
             if (IsFixedTimeStep)
             {
