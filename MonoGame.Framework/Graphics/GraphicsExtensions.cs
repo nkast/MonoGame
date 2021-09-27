@@ -950,6 +950,19 @@ namespace Microsoft.Xna.Framework.Graphics
             }
         }
 
+#if BLAZOR
+        internal static tainicom.Wasm.Canvas.WebGL.IWebGLRenderingContext GL;
+        public static void CheckGLError()
+        {
+            tainicom.Wasm.Canvas.WebGL.WebGLErrorCode error = GL.GetError();
+            if (error != tainicom.Wasm.Canvas.WebGL.WebGLErrorCode.NO_ERROR)
+            {
+                Console.WriteLine(error);
+                throw new Exception("GL.GetError() returned " + error.ToString());
+            }
+        }
+#endif
+
 #if OPENGL
 
         public static int GetBoundTexture2D()

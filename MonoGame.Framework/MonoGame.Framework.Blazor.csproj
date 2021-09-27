@@ -1,0 +1,91 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\MonoGame.props" />
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>obj\</BaseIntermediateOutputPath>
+    <BaseOutputPath>..\Artifacts\tainicom.Xna.Framework.Blazor\</BaseOutputPath>
+    <AssemblyName>Monogame.Framework</AssemblyName>
+    <RootNamespace>Microsoft.Xna.Framework</RootNamespace>
+
+    <DefineConstants>WEB;STBSHARP_INTERNAL</DefineConstants>
+    
+    <Version>3.8.9000.0</Version>
+    <AssemblyVersion>3.8.9000.0</AssemblyVersion>
+
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <LangVersion>5</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <DefineConstants>XNADESIGNPROVIDED;</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>XNA framework for the WebAssembly.</Description>
+    <PackageTags>monogame;.net core;core;.net standard;standard;Blazor;webassembly</PackageTags>
+    <PackageId>tainicom.Xna.Framework.Blazor</PackageId>
+    <Authors>MonoGame Team, Kastellanos Nikos</Authors>
+    <PackageIcon />
+    <RepositoryUrl>https://github.com/nkast/MonoGame/</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/nkast/MonoGame/</PackageProjectUrl>
+    <Product>Xna.Framework</Product>
+    <Company>MonoGame Team, Kastellanos Nikos</Company>
+  </PropertyGroup>
+
+  <Import Project="MonoGame.Framework.Common.props" />
+
+
+    
+  <ItemGroup>
+
+    <Compile Remove="Graphics\GraphicsAdapter.cs" />    
+    <Compile Remove="Input\MessageBox.cs" />
+    <Compile Remove="Input\KeyboardInput.cs" />
+    <None Remove="P:\MonoGame\Images\Icon.png" />
+
+    <Compile Include="Platform\Blazor\BlazorGamePlatform.cs" />
+    <Compile Include="Platform\Blazor\BlazorGameWindow.cs" />
+    <Compile Include="GamePlatform.Web.cs" />
+    <Compile Include="Platform\Graphics\Shader\ShaderProgramCache.Blazor.cs" />
+    <Compile Include="Graphics\Vertices\VertexDeclaration.Blazor.cs" />
+    <Compile Include="Input\GamePad.Blazor.cs" />
+    <Compile Include="Input\Joystick.Blazor.cs" />
+    <Compile Include="Input\Keyboard.Blazor.cs" />
+    <Compile Include="Input\Mouse.Blazor.cs" />
+    <Compile Include="Input\MouseCursor.Blazor.cs" />
+    <Compile Include="Media\MediaLibrary.Blazor.cs" />
+    <Compile Include="Media\ConcreteMediaPlayer.Blazor.cs" />
+    <Compile Include="Media\Song.Blazor.cs" />
+    <Compile Include="Media\Video.Blazor.cs" />
+    <Compile Include="Media\VideoPlayer.Blazor.cs" />
+    <Compile Include="TitleContainer.Blazor.cs" />
+    <Compile Include="Utilities\ReflectionHelpers.Legacy.cs" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="Properties\AssemblyInfo.Blazor.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="tainicom.Wasm.Canvas" Version="3.2.10" />
+    <PackageReference Include="tainicom.Wasm.XHR" Version="3.2.10" />
+    <PackageReference Include="tainicom.Wasm.Dom" Version="3.2.10" />
+    <PackageReference Include="tainicom.Xna.Framework" Version="3.8.9012" />
+  </ItemGroup>
+
+
+    
+  <ItemGroup>
+    <Reference Include="Xna.Framework">
+      <HintPath>..\Artifacts\Xna.Framework\Release\netstandard2.0\Xna.Framework.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <Import Project="Blazor.targets" />
+  <Import Project="BlazorAudio.targets" />
+</Project>

@@ -11,10 +11,10 @@ namespace Microsoft.Xna.Framework.Graphics
             SupportsNonPowerOfTwo = device.GraphicsProfile >= GraphicsProfile.HiDef;
             SupportsTextureFilterAnisotropic = true;
 
-            SupportsDepth24 = true;
-            SupportsPackedDepthStencil = true;
+            SupportsDepth24 = false;
+            SupportsPackedDepthStencil = false;
             SupportsDepthNonLinear = false;
-            SupportsTextureMaxLevel = true;
+            SupportsTextureMaxLevel = false;
 
             // Texture compression
             SupportsDxt1 = true;
