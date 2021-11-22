@@ -6,12 +6,12 @@
   <ItemGroup>
     <Compile Include="Audio\Xact\WaveBank.Default.cs" />
     <Compile Include="Platform\Audio\AudioLoader.cs" />
-    <Compile Include="Audio\DynamicSoundEffectInstance.OpenAL.cs" />
-    <Compile Include="Audio\Microphone.OpenAL.cs" />
+    <Compile Include="Audio\ConcreteAudioService.OpenAL.cs" />
+    <Compile Include="Audio\ConcreteDynamicSoundEffectInstance.OpenAL.cs" />
+    <Compile Include="Audio\ConcreteMicrophone.OpenAL.cs" />
     <Compile Include="Platform\Audio\OALSoundBuffer.cs" />
     <Compile Include="Platform\Audio\OpenAL.cs" />
-    <Compile Include="Platform\Audio\OpenALSoundController.cs" />
-    <Compile Include="Audio\SoundEffect.OpenAL.cs" />
-    <Compile Include="Audio\SoundEffectInstance.OpenAL.cs" />
+    <Compile Include="Audio\ConcreteSoundEffect.OpenAL.cs" />
+    <Compile Include="Audio\ConcreteSoundEffectInstance.OpenAL.cs" />
   </ItemGroup>
 </Project>

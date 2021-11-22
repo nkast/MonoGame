@@ -3,97 +3,83 @@
 // file 'LICENSE.txt', which is part of this source code package.
 
 using System;
-using MonoGame.OpenAL;
+using Microsoft.Xna.Framework.Audio;
+using Microsoft.Xna.Platform.Audio.OpenAL;
 
-namespace Microsoft.Xna.Framework.Audio
+namespace Microsoft.Xna.Platform.Audio
 {
-	internal class OALSoundBuffer : IDisposable
-	{
-		int openALDataBuffer;
-		ALFormat openALFormat;
-		int dataSize;
+    internal class ALSoundBuffer : IDisposable
+    {
+        internal AudioService _audioService { get; private set; }
         bool _isDisposed;
 
-		public OALSoundBuffer()
-		{
-            AL.GenBuffers(1, out openALDataBuffer);
-            ALHelper.CheckError("Failed to generate OpenAL data buffer.");
-		}
+        public int Buffer
+        {
+            get;
+            private set;
+        }
 
-        ~OALSoundBuffer()
+
+        public ALSoundBuffer(AudioService audioService)
+        {
+            if (audioService == null)
+                throw new ArgumentNullException("audioService");
+
+            _audioService = audioService;
+            _audioService.Disposing += _audioService_Disposing;
+
+            Buffer = AL.GenBuffer();
+            ALHelper.CheckError("Failed to generate OpenAL data buffer.");
+        }
+
+        ~ALSoundBuffer()
         {
             Dispose(false);
         }
-
-		public int OpenALDataBuffer
-        {
-			get
-            {
-				return openALDataBuffer;
-			}
-		}
-
-		public double Duration
-        {
-			get;
-			set;
-		}
+        
 
         public void BindDataBuffer(byte[] dataBuffer, ALFormat format, int size, int sampleRate, int sampleAlignment = 0)
         {
-            if ((format == ALFormat.MonoMSAdpcm || format == ALFormat.StereoMSAdpcm) && !OpenALSoundController.Instance.SupportsAdpcm)
+            ConcreteAudioService ConcreteAudioService = (ConcreteAudioService)AudioService.Current._strategy;
+
+            if ((format == ALFormat.MonoMSAdpcm || format == ALFormat.StereoMSAdpcm) && !ConcreteAudioService.SupportsAdpcm)
                 throw new InvalidOperationException("MS-ADPCM is not supported by this OpenAL driver");
-            if ((format == ALFormat.MonoIma4 || format == ALFormat.StereoIma4) && !OpenALSoundController.Instance.SupportsIma4)
+            if ((format == ALFormat.MonoIma4 || format == ALFormat.StereoIma4) && !ConcreteAudioService.SupportsIma4)
                 throw new InvalidOperationException("IMA/ADPCM is not supported by this OpenAL driver");
-
-            openALFormat = format;
-            dataSize = size;
-            int unpackedSize = 0;
-
-            if (sampleAlignment > 0)
-            {
-                AL.Bufferi(openALDataBuffer, ALBufferi.UnpackBlockAlignmentSoft, sampleAlignment);
-                ALHelper.CheckError("Failed to fill buffer.");
-            }
-
-            AL.BufferData(openALDataBuffer, openALFormat, dataBuffer, size, sampleRate);
+            
+            AL.BufferData(Buffer, format, dataBuffer, size, sampleRate, sampleAlignment);
             ALHelper.CheckError("Failed to fill buffer.");
-
-            int bits, channels;
-            Duration = -1;
-            AL.GetBuffer(openALDataBuffer, ALGetBufferi.Bits, out bits);
-            ALHelper.CheckError("Failed to get buffer bits");
-            AL.GetBuffer(openALDataBuffer, ALGetBufferi.Channels, out channels);
-            ALHelper.CheckError("Failed to get buffer channels");
-            AL.GetBuffer(openALDataBuffer, ALGetBufferi.Size, out unpackedSize);
-            ALHelper.CheckError("Failed to get buffer size");
-            Duration = (float)(unpackedSize / ((bits / 8) * channels)) / (float)sampleRate;
         }
 
-		public void Dispose()
-		{
+        private void _audioService_Disposing(object sender, EventArgs e)
+        {
+            Dispose();
+        }
+
+        public void Dispose()
+        {
             Dispose(true);
             GC.SuppressFinalize(this);
-		}
+        }
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!_isDisposed)
-            {
-                if (disposing)
-                {
-                    // Clean up managed objects
-                }
-                // Release unmanaged resources
-                if (AL.IsBuffer(openALDataBuffer))
-                {
-                    ALHelper.CheckError("Failed to fetch buffer state.");
-                    AL.DeleteBuffers(1, ref openALDataBuffer);
-                    ALHelper.CheckError("Failed to delete buffer.");
-                }
+            if (_isDisposed) return;
 
-                _isDisposed = true;
+            if (disposing)
+            {
+                // Clean up managed objects
             }
+
+            // Release unmanaged resources
+            AL.DeleteBuffer(Buffer);
+            ALHelper.CheckError("Failed to delete buffer.");
+            Buffer = 0;
+
+            _audioService.Disposing -= _audioService_Disposing;
+            _audioService = null;
+
+            _isDisposed = true;
         }
-	}
+    }
 }
