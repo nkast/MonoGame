@@ -11,7 +11,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.EffectCompiler
     {
 
         private const string Header = "MGFX";
-        private const int Version = 10;
+        private const int Version = 9;
 
         /// <summary>
         /// Writes the effect for loading later.
