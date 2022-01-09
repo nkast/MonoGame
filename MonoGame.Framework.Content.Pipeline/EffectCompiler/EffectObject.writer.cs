@@ -32,12 +32,18 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.EffectCompiler
             using(BinaryWriter memWriter = new BinaryWriter(memStream))
             {
                 // Write all the constant buffers.
-                memWriter.Write(ConstantBuffers.Count);
+                if (Version == 9)
+                    memWriter.Write((byte)ConstantBuffers.Count);
+                else
+                    memWriter.Write(ConstantBuffers.Count);
                 foreach (var cbuffer in ConstantBuffers)
-                    cbuffer.Write(memWriter, options);
+                    cbuffer.Write(Version, memWriter, options);
 
                 // Write all the shaders.
-                memWriter.Write(Shaders.Count);
+                if (Version == 9)
+                    memWriter.Write((byte)Shaders.Count);
+                else
+                    memWriter.Write(Shaders.Count);
                 foreach (var shader in Shaders)
                     shader.Write(memWriter, options);
 
@@ -45,14 +51,20 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.EffectCompiler
                 WriteParameters(memWriter, Parameters, Parameters.Length);
 
                 // Write the techniques.
-                memWriter.Write(Techniques.Length);
+                if (Version == 9)
+                    memWriter.Write((byte)Techniques.Length);
+                else
+                    memWriter.Write(Techniques.Length);
                 foreach (var technique in Techniques)
                 {
                     memWriter.Write(technique.name);
                     WriteAnnotations(memWriter, technique.annotation_handles);
 
                     // Write the passes.
-                    memWriter.Write((int)technique.pass_count);
+                    if (Version == 9)
+                        memWriter.Write((byte)technique.pass_count);
+                    else
+                        memWriter.Write((int)technique.pass_count);
                     for (var p = 0; p < technique.pass_count; p++)
                     {
                         var pass = technique.pass_handles[p];
@@ -63,8 +75,16 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.EffectCompiler
                         // Write the index for the vertex and pixel shaders.
                         var vertexShaderIndex = GetShaderIndex(STATE_CLASS.VERTEXSHADER, pass.states);
                         var pixelShaderIndex = GetShaderIndex(STATE_CLASS.PIXELSHADER, pass.states);
-                        memWriter.Write(vertexShaderIndex);
-                        memWriter.Write(pixelShaderIndex);
+                        if (Version == 9)
+                        {
+                            memWriter.Write((byte)vertexShaderIndex);
+                            memWriter.Write((byte)pixelShaderIndex);
+                        }
+                        else
+                        {
+                            memWriter.Write(vertexShaderIndex);
+                            memWriter.Write(pixelShaderIndex);
+                        }
 
                         // Write the state objects too!
                         if (pass.blendState != null)
@@ -137,12 +157,16 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.EffectCompiler
             }
 
             // Write a tail to be used by the reader for validation.
-            writer.Write(Header.ToCharArray());
+            if (Version >= 9)
+                writer.Write(Header.ToCharArray());
         }
 
         private static void WriteParameters(BinaryWriter writer, d3dx_parameter[] parameters, int count)
         {
-            writer.Write(count);
+            if (Version == 9)
+                Write7BitEncodedInt(writer, count);
+            else
+                writer.Write(count);
             for (var i = 0; i < count; i++)
                 WriteParameter(writer, parameters[i]);
         }
@@ -181,7 +205,10 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.EffectCompiler
         private static void WriteAnnotations(BinaryWriter writer, d3dx_parameter[] annotations)
         {
             var count = annotations == null ? 0 : annotations.Length;
-            writer.Write(count);
+            if (Version == 9)
+                writer.Write((byte)count);
+            else
+                writer.Write(count);
             for (var i = 0; i < count; i++)
                 WriteParameter(writer, annotations[i]);
         }
