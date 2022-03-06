@@ -30,6 +30,7 @@
     <PackageProjectUrl>https://github.com/devedse/MonoGame/</PackageProjectUrl>
     <Product>Xna.Framework</Product>
     <Company>MonoGame Team, Kastellanos Nikos</Company>
+    <UserSecretsId>aaaddbf7-50e4-4360-a1f2-05709543b48c</UserSecretsId>
   </PropertyGroup>
 
   <Import Project="MonoGame.Framework.Common.props" />
@@ -72,6 +73,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="StbImageSharp" Version="2.27.8" />
+    <PackageReference Include="StbImageWriteSharp" Version="1.13.5" />
     <PackageReference Include="tainicom.Wasm.Canvas" Version="3.2.10" />
     <PackageReference Include="tainicom.Wasm.XHR" Version="3.2.10" />
     <PackageReference Include="tainicom.Wasm.Dom" Version="3.2.10" />
