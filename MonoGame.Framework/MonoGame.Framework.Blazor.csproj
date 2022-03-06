@@ -9,8 +9,8 @@
 
     <DefineConstants>WEB;STBSHARP_INTERNAL</DefineConstants>
     
-    <Version>3.8.9012.9</Version>
-    <AssemblyVersion>3.8.9012.9</AssemblyVersion>
+    <Version>3.8.10000.0</Version>
+    <AssemblyVersion>3.8.10000.0</AssemblyVersion>
 
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <LangVersion>5</LangVersion>
@@ -23,11 +23,11 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Description>XNA framework for the WebAssembly.</Description>
     <PackageTags>monogame;.net core;core;.net standard;standard;Blazor;webassembly</PackageTags>
-    <PackageId>tainicom.Xna.Framework.Blazor</PackageId>
-    <Authors>MonoGame Team, Kastellanos Nikos</Authors>
+    <PackageId>devedse.Xna.Framework.Blazor</PackageId>
+    <Authors>MonoGame Team, Kastellanos Nikos, Devedse</Authors>
     <PackageIcon />
-    <RepositoryUrl>https://github.com/nkast/MonoGame/</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/nkast/MonoGame/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/devedse/MonoGame/</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/devedse/MonoGame/</PackageProjectUrl>
     <Product>Xna.Framework</Product>
     <Company>MonoGame Team, Kastellanos Nikos</Company>
   </PropertyGroup>

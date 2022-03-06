@@ -142,6 +142,12 @@ namespace Microsoft.Xna.Framework.Content
                         readerTypeString = PrepareType(readerTypeString);
 
                         var l_readerType = Type.GetType(readerTypeString);
+                        if (l_readerType == null)
+                        {
+                            var readerTypeString2 = readerTypeString.Replace("MonoGame.Framework]]", "Xna.Framework]]");
+                            l_readerType = Type.GetType(readerTypeString2);
+                        }
+
                         if (l_readerType != null)
                         {
                             ContentTypeReader typeReader;
