@@ -588,6 +588,12 @@
   <ItemGroup>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="Platform\Cardboard\GoogleCardboard\GoogleCardboard.csproj">
+      <Project>{9d3687f8-435f-4ae2-94e0-1169bdec04be}</Project>
+      <Name>GoogleCardboard</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
     <EmbeddedResource Include="Graphics\Effect\Resources\AlphaTestEffect.ogl.mgfxo" />
     <EmbeddedResource Include="Graphics\Effect\Resources\BasicEffect.ogl.mgfxo" />
     <EmbeddedResource Include="Graphics\Effect\Resources\DualTextureEffect.ogl.mgfxo" />
