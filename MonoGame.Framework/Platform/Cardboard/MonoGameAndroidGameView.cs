@@ -967,6 +967,11 @@ namespace Microsoft.Xna.Framework
 
                     glSurfaceAvailable = true;
 
+                    // Must set viewport after creation, the viewport has correct values in it already as we call it, but
+                    // the surface is created after the correct viewport is already applied so we must do it again.
+                    if (_game.GraphicsDevice != null)
+                        _game.graphicsDeviceManager.GetStrategy<Platform.ConcreteGraphicsDeviceManager>().InternalResetClientBounds();
+
                     if (MonoGame.OpenGL.GL.GetError == null)
                         MonoGame.OpenGL.GL.LoadEntryPoints();
                 }
