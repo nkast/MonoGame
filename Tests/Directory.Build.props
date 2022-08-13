@@ -1,13 +1,8 @@
 <Project>
 
-  <PropertyGroup>
-    <AssemblyName>MonoGame.Tests</AssemblyName>
-    <MonoGamePlatform>$(MSBuildProjectName.Substring(15))</MonoGamePlatform>
-    <BaseIntermediateOutputPath>obj\$(MonoGamePlatform)</BaseIntermediateOutputPath>
-    <BaseOutputPath>..\Artifacts\Tests\$(MonoGamePlatform)</BaseOutputPath>
-    <AppendTargetFrameworkToOutputPath>False</AppendTargetFrameworkToOutputPath>
-    <UseAppHost>true</UseAppHost>
-  </PropertyGroup>
+	<PropertyGroup>
+		<BaseIntermediateOutputPath>obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+	</PropertyGroup>	
 
 </Project>
 
