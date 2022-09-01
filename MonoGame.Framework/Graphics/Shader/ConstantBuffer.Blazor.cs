@@ -81,6 +81,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 // and cast this correctly... else it doesn't work as i guess
                 // GL is checking the type of the uniform.
 
+                System.Diagnostics.Debug.Assert((_buffer.Length % 16) == 0);
                 GL.Uniform4fv(_location, _buffer);
                 GraphicsExtensions.CheckGLError();
             }
