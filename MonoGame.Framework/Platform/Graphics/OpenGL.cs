@@ -710,14 +710,14 @@ namespace MonoGame.OpenGL
         [System.Security.SuppressUnmanagedCodeSecurity()]
         [UnmanagedFunctionPointer(callingConvention)]
         [MonoNativeFunctionWrapper]
-        internal unsafe delegate void Uniform4fvDelegate(int location, int size, float* values);
-        internal static Uniform4fvDelegate Uniform4fv;
+        internal delegate void Uniform1iDelegate(int location, int value);
+        internal static Uniform1iDelegate Uniform1i;
 
         [System.Security.SuppressUnmanagedCodeSecurity()]
         [UnmanagedFunctionPointer(callingConvention)]
         [MonoNativeFunctionWrapper]
-        internal delegate void Uniform1iDelegate(int location, int value);
-        internal static Uniform1iDelegate Uniform1i;
+        internal unsafe delegate void Uniform4fvDelegate(int location, int count, float* values);
+        internal static Uniform4fvDelegate Uniform4fv;
 
         [System.Security.SuppressUnmanagedCodeSecurity()]
         [UnmanagedFunctionPointer(callingConvention)]
@@ -1522,12 +1522,14 @@ namespace MonoGame.OpenGL
                 DepthRanged(min, max);
         }
 
-        internal static void Uniform1 (int location, int value) {
+        internal static void Uniform1(int location, int value)
+        {
             Uniform1i(location, value);
         }
 
-        internal static unsafe void Uniform4 (int location, int size, float* value) {
-            Uniform4fv(location, size, value);
+        internal static unsafe void Uniform4(int location, int count, float* value)
+        {
+            Uniform4fv(location, count, value);
         }
 
         internal unsafe static string GetString (StringName name)

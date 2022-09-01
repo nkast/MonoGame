@@ -78,7 +78,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 // and cast this correctly... else it doesn't work as i guess
                 // GL is checking the type of the uniform.
 
-                GL.Uniform4(_location, _buffer.Length / 16, (float*)bytePtr);
+                GL.Uniform4fv(_location, _buffer.Length / 16, (float*)bytePtr);
                 GraphicsExtensions.CheckGLError();
             }
 
